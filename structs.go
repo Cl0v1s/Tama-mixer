@@ -8,7 +8,22 @@ import (
 	"unicode"
 )
 
-// ===== Racine SVG =====
+type Point struct {
+	X         float64
+	Y         float64
+	Label     string
+	Transform string
+}
+
+type Body struct {
+	Svg    SVG
+	Points []Point
+}
+
+type BodyPart struct {
+	Svg   SVG
+	Label string
+}
 
 type SVG struct {
 	XMLName xml.Name `xml:"svg"`
@@ -19,8 +34,6 @@ type SVG struct {
 
 	Groups []Group `xml:"g"`
 }
-
-// ===== Groupes <g> =====
 
 type Group struct {
 	ID    string `xml:"id,attr"`
@@ -34,7 +47,24 @@ type Group struct {
 	Circles  []Circle  `xml:"circle"`
 }
 
-// ===== Éléments SVG =====
+type Ellipse struct {
+	ID        string  `xml:"id,attr"`
+	Label     string  `xml:"label,attr"`
+	CX        float64 `xml:"cx,attr"`
+	CY        float64 `xml:"cy,attr"`
+	RX        float64 `xml:"rx,attr"`
+	RY        float64 `xml:"ry,attr"`
+	Transform string  `xml:"transform,attr"`
+}
+
+type Circle struct {
+	ID        string  `xml:"id,attr"`
+	Label     string  `xml:"label,attr"`
+	CX        float64 `xml:"cx,attr"`
+	CY        float64 `xml:"cy,attr"`
+	R         float64 `xml:"r,attr"`
+	Transform string  `xml:"transform,attr"`
+}
 
 type Command struct {
 	Type string
@@ -42,10 +72,11 @@ type Command struct {
 }
 
 type Path struct {
-	ID    string `xml:"id,attr"`
-	Label string `xml:"label,attr"`
-	D     string `xml:"d,attr"`
-	Style string `xml:"style,attr"`
+	ID        string `xml:"id,attr"`
+	Label     string `xml:"label,attr"`
+	D         string `xml:"d,attr"`
+	Style     string `xml:"style,attr"`
+	Transform string `xml:"transform,attr"`
 }
 
 func PrintCommands(cmds []Command) {
@@ -117,21 +148,4 @@ func ParseD(d string) []Command {
 	}
 
 	return commands
-}
-
-type Ellipse struct {
-	ID    string  `xml:"id,attr"`
-	Label string  `xml:"label,attr"`
-	CX    float64 `xml:"cx,attr"`
-	CY    float64 `xml:"cy,attr"`
-	RX    float64 `xml:"rx,attr"`
-	RY    float64 `xml:"ry,attr"`
-}
-
-type Circle struct {
-	ID    string  `xml:"id,attr"`
-	Label string  `xml:"label,attr"`
-	CX    float64 `xml:"cx,attr"`
-	CY    float64 `xml:"cy,attr"`
-	R     float64 `xml:"r,attr"`
 }

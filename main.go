@@ -21,17 +21,13 @@ func main() {
 
 	bodies, bodyparts := Sort(svg)
 
-	for i := 0; i < len(bodyparts); i++ {
-		x, y := FindLowerPadding(bodyparts[i], bodyparts[i].Label)
-		bodyparts[i] = Unpad(bodyparts[i], x, y)
-		Save("bodyparts", []Group{bodyparts[i]}, -20, 20)
+	for _, bodypart := range bodyparts {
+		Save("bodyparts", bodypart.Svg)
 	}
 
-	for i := 0; i < len(bodies); i++ {
-		x, y := FindLowerPadding(bodies[i], "body")
-		bodies[i] = Unpad(bodies[i], x, y)
-		Save("bodies", []Group{bodies[i]}, -20, 20)
-		bodies[i] = Place(bodies[i], bodyparts)
-		Save("generated", []Group{bodies[i]}, -20, 20)
+	for _, body := range bodies {
+		Save("bodies", body.Svg)
+		s := Place(body, bodyparts)
+		Save("generated", s)
 	}
 }

@@ -7,7 +7,7 @@
    viewBox="0 0 210 297"
    version="1.1"
    id="svg1"
-   inkscape:version="1.4.2 (ebf0e940, 2025-05-08)"
+   inkscape:version="1.4.2 (ebf0e940d0, 2025-05-08)"
    sodipodi:docname="tama.svg"
    xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
    xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
@@ -23,15 +23,15 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
-     inkscape:zoom="4.521644"
-     inkscape:cx="331.9589"
-     inkscape:cy="131.36815"
-     inkscape:window-width="1440"
-     inkscape:window-height="847"
+     inkscape:zoom="12.789141"
+     inkscape:cx="320.34991"
+     inkscape:cy="123.11226"
+     inkscape:window-width="2560"
+     inkscape:window-height="1371"
      inkscape:window-x="0"
-     inkscape:window-y="25"
+     inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer2" />
+     inkscape:current-layer="g7" />
   <defs
      id="defs1" />
   <g
@@ -66,13 +66,13 @@
          sodipodi:nodetypes="cscc"
          inkscape:label="path" />
       <ellipse
-         style="fill:none;stroke:none;stroke-width:0.52903"
+         style="fill:none;stroke:#000000;stroke-width:2.09021;stroke-opacity:1"
          id="path8-3-3"
-         cx="32.10453"
-         cy="20.462862"
+         cx="45.153343"
+         cy="35.325634"
          inkscape:label="leg2"
-         rx="0.090000004"
-         ry="0.089945354" />
+         rx="0.41881433"
+         ry="0.30173001" />
     </g>
     <g
        id="eye1"
@@ -113,20 +113,44 @@
     <g
        id="body"
        inkscape:label="body">
+      <ellipse
+         style="fill:none;stroke:#000000;stroke-width:1.00561;stroke-opacity:1"
+         id="path8-73-1"
+         cx="39.159039"
+         cy="12.331703"
+         inkscape:label="eye1"
+         rx="0.20279902"
+         ry="0.14422952" />
+      <ellipse
+         style="fill:none;stroke:#000000;stroke-width:1.20503;stroke-opacity:1"
+         id="path8-7-6"
+         cx="20.141708"
+         cy="16.047396"
+         inkscape:label="mouth"
+         rx="0.22011977"
+         ry="0.1908077" />
+      <ellipse
+         style="fill:none;stroke:#000000;stroke-width:2.09021;stroke-opacity:1"
+         id="path8-3-3-3"
+         cx="45.061527"
+         cy="35.203495"
+         inkscape:label="leg2"
+         rx="0.41881433"
+         ry="0.30173001" />
+      <ellipse
+         style="fill:none;fill-opacity:1;stroke:#003e85;stroke-width:0.79375"
+         id="path9-3"
+         cx="26.183123"
+         cy="37.216007"
+         rx="0.76583886"
+         ry="0.85593754"
+         inkscape:label="leg1" />
       <path
          style="fill:none;stroke:#003e85;stroke-width:0.79375"
          d="m 20.789238,12.099557 c 2.384706,-3.8247189 9.090522,-2.8303014 13.419508,-2.9698914 4.328986,-0.13959 8.777591,-0.1227708 12.099557,1.8699314 3.321966,1.992702 5.665494,5.552875 6.599759,8.799678 0.934265,3.246803 0.907,6.146902 -0.769972,9.239661 -1.401888,2.585435 -4.005582,4.719819 -7.320097,6.355104 -0.650388,0.320882 -1.328144,0.622547 -2.029561,0.904631 -4.275988,1.719648 -11.763687,4.446312 -15.729423,1.649939 -0.37043,-0.261202 -0.689892,-0.548786 -0.965528,-0.859054 -2.675262,-3.011389 -1.222003,-8.159713 -2.169357,-12.065472 -0.706428,-2.912467 -2.980282,-6.045882 -3.64267,-8.952141 -0.317429,-1.392734 -0.264783,-2.733301 0.507784,-3.972386 z"
          id="path1"
          sodipodi:nodetypes="szzzssssssss"
          inkscape:label="body" />
-      <ellipse
-         style="fill:none;fill-opacity:1;stroke:#003e85;stroke-width:0.79375"
-         id="path8"
-         cx="25.669403"
-         cy="36.935417"
-         rx="1.1408623"
-         ry="1.0933264"
-         inkscape:label="leg1" />
     </g>
   </g>
   <g
@@ -145,13 +169,14 @@
          cy="32.042488"
          cx="91.276848" />
       <ellipse
-         style="fill:none;fill-opacity:1;stroke:#003e85;stroke-width:0.386763;stroke-dasharray:none;stroke-opacity:1"
-         id="path10-97"
+         style="fill:none;stroke:#003e85;stroke-width:0.52903;stroke-opacity:1"
+         id="path8-7-0"
+         cx="85.337227"
+         cy="-27.4233"
          inkscape:label="mouth"
-         ry="1.3858356"
-         rx="1.6564597"
-         cy="34.354492"
-         cx="82.880989" />
+         rx="0.090000004"
+         ry="0.089945354"
+         transform="rotate(40.769806)" />
       <ellipse
          style="fill:none;fill-opacity:1;stroke:#003e85;stroke-width:0.386763;stroke-dasharray:none;stroke-opacity:1"
          id="path10-9"
