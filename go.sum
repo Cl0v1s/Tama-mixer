@@ -1,0 +1,12 @@
+github.com/JoshVarga/svgparser v0.0.0-20200804023048-5eaba627a7d1 h1:RAQocNl+YQYGPt5yh4SR5zFUIHKrXnLhjIGhHO4Vwnc=
+github.com/JoshVarga/svgparser v0.0.0-20200804023048-5eaba627a7d1/go.mod h1:tMmgUTWcco9d1ZmK7zjxuTv7XWZhyutXIsgu0uJ3gDw=
+github.com/rustyoz/Mtransform v0.0.0-20250628105438-00796a985d0a h1:iqc6IJquka4XBgVSqP+KaNe4nPk7n+pfTbpTx51IgJo=
+github.com/rustyoz/Mtransform v0.0.0-20250628105438-00796a985d0a/go.mod h1:/OCzi5mN2hO/GaVureeTqn0EJbOnZUdBF8zHxWvFlt8=
+github.com/rustyoz/genericlexer v0.0.0-20250522144106-d3cfee480384 h1:jrCaAewj72Bp+RHPzRB+CFOLRwCiluzaiwY0R1h0SNw=
+github.com/rustyoz/genericlexer v0.0.0-20250522144106-d3cfee480384/go.mod h1:m65JtsVg785EjQvQylesseVucezoQZqJozlPAfjXmbE=
+github.com/rustyoz/svg v0.0.0-20250705135709-8b1786137cb3 h1:dFappt+gj/o9cCFfMmXV8Jq+hShQmFlM6Uh2Vd0YlzE=
+github.com/rustyoz/svg v0.0.0-20250705135709-8b1786137cb3/go.mod h1:33v4CGNONT4+QIwIt3o1GVdBqTfLCeptHNc0HpZ1N14=
+golang.org/x/net v0.48.0 h1:zyQRTTrjc33Lhh0fBgT/H3oZq9WuvRR5gPC70xpDiQU=
+golang.org/x/net v0.48.0/go.mod h1:+ndRgGjkh8FGtu1w1FGbEC31if4VrNVMuKTgcAAnQRY=
+golang.org/x/text v0.32.0 h1:ZD01bjUt1FQ9WJ0ClOL5vxgxOI/sVCNgX1YtKwcY0mU=
+golang.org/x/text v0.32.0/go.mod h1:o/rUWzghvpD5TXrTIBuJU77MTaN0ljMWE47kxGJQ7jY=

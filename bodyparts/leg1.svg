@@ -1,0 +1,6 @@
+ <svg width="80" height="80" viewBox="-40 -40 80 80" xmlns="http://www.w3.org/2000/svg">
+   <g id="leg1" label="leg1" transform="">
+     <path id="path5" label="path" d=" m -0.07077199999999806 -0.15205200000000474 c 0 0 -5.119122 2.024352 -6.231104 4.28701 -1.296116 2.637334 0.481112 8.802701 0.481112 8.802701 l -4.161323 0.02535" style="fill:none;stroke:#003e85;stroke-width:0.79375"></path>
+     <ellipse id="path9" label="leg1" cx="0" cy="0" rx="0.76583886" ry="0.85593754"></ellipse>
+   </g>
+ </svg>

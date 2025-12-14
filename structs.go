@@ -1,0 +1,137 @@
+package main
+
+import (
+	"encoding/xml"
+	"fmt"
+	"strconv"
+	"strings"
+	"unicode"
+)
+
+// ===== Racine SVG =====
+
+type SVG struct {
+	XMLName xml.Name `xml:"svg"`
+	Width   string   `xml:"width,attr"`
+	Height  string   `xml:"height,attr"`
+	ViewBox string   `xml:"viewBox,attr"`
+	Xmlns   string   `xml:"xmlns,attr"`
+
+	Groups []Group `xml:"g"`
+}
+
+// ===== Groupes <g> =====
+
+type Group struct {
+	ID    string `xml:"id,attr"`
+	Label string `xml:"label,attr"`
+
+	Transform string `xml:"transform,attr"`
+
+	Groups   []Group   `xml:"g"`
+	Paths    []Path    `xml:"path"`
+	Ellipses []Ellipse `xml:"ellipse"`
+	Circles  []Circle  `xml:"circle"`
+}
+
+// ===== Éléments SVG =====
+
+type Command struct {
+	Type string
+	Args []float64
+}
+
+type Path struct {
+	ID    string `xml:"id,attr"`
+	Label string `xml:"label,attr"`
+	D     string `xml:"d,attr"`
+	Style string `xml:"style,attr"`
+}
+
+func PrintCommands(cmds []Command) {
+	for i, cmd := range cmds {
+		fmt.Printf(
+			"%02d | %s %v\n",
+			i,
+			cmd.Type,
+			cmd.Args,
+		)
+	}
+}
+
+func MarshalD(cmd Command) string {
+	var b strings.Builder
+
+	// Lettre de commande
+	b.WriteString(cmd.Type)
+
+	// Arguments
+	for _, arg := range cmd.Args {
+		b.WriteByte(' ')
+		b.WriteString(strconv.FormatFloat(arg, 'f', -1, 64))
+	}
+
+	return b.String()
+}
+
+func ParseD(d string) []Command {
+	var currentCmd *Command = nil
+	commands := make([]Command, 0)
+	buffer := make([]rune, 0)
+	for i := 0; i < len(d); i++ {
+		c := rune(d[i])
+
+		if unicode.IsLetter(c) || c == ',' || c == ' ' {
+			if currentCmd != nil && len(buffer) > 0 {
+				number, err := strconv.ParseFloat(string(buffer), 64)
+				if err != nil {
+					panic(err)
+				}
+				currentCmd.Args = append(currentCmd.Args, number)
+			}
+			buffer = make([]rune, 0)
+		} else {
+			buffer = append(buffer, c)
+		}
+
+		if unicode.IsLetter(c) {
+			if currentCmd != nil {
+				commands = append(commands, *currentCmd)
+			}
+			currentCmd = &Command{
+				Type: string(c),
+				Args: make([]float64, 0),
+			}
+		}
+	}
+
+	if currentCmd != nil && len(buffer) > 0 {
+		number, err := strconv.ParseFloat(string(buffer), 64)
+		if err != nil {
+			panic(err)
+		}
+		currentCmd.Args = append(currentCmd.Args, number)
+	}
+	if currentCmd != nil {
+		commands = append(commands, *currentCmd)
+	}
+
+	return commands
+}
+
+type Ellipse struct {
+	ID    string  `xml:"id,attr"`
+	Label string  `xml:"label,attr"`
+	CX    float64 `xml:"cx,attr"`
+	CY    float64 `xml:"cy,attr"`
+	RX    float64 `xml:"rx,attr"`
+	RY    float64 `xml:"ry,attr"`
+}
+
+type Circle struct {
+	ID    string  `xml:"id,attr"`
+	Label string  `xml:"label,attr"`
+	CX    float64 `xml:"cx,attr"`
+	CY    float64 `xml:"cy,attr"`
+	R     float64 `xml:"r,attr"`
+}
