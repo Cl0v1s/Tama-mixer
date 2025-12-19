@@ -5,14 +5,140 @@ import (
 	"math"
 	"os"
 	"slices"
+	"strconv"
 	"strings"
+	"unicode"
 )
+
+func ParseD(d string) []Command {
+	var currentCmd *Command = nil
+	commands := make([]Command, 0)
+	buffer := make([]rune, 0)
+	for i := 0; i < len(d); i++ {
+		c := rune(d[i])
+
+		if unicode.IsLetter(c) || c == ',' || c == ' ' {
+			if currentCmd != nil && len(buffer) > 0 {
+				number, err := strconv.ParseFloat(string(buffer), 64)
+				if err != nil {
+					panic(err)
+				}
+				currentCmd.Args = append(currentCmd.Args, number)
+			}
+			buffer = make([]rune, 0)
+		} else {
+			buffer = append(buffer, c)
+		}
+
+		if unicode.IsLetter(c) {
+			if currentCmd != nil {
+				commands = append(commands, *currentCmd)
+			}
+			currentCmd = &Command{
+				Type: string(c),
+				Args: make([]float64, 0),
+			}
+		}
+	}
+
+	if currentCmd != nil && len(buffer) > 0 {
+		number, err := strconv.ParseFloat(string(buffer), 64)
+		if err != nil {
+			panic(err)
+		}
+		currentCmd.Args = append(currentCmd.Args, number)
+	}
+	if currentCmd != nil {
+		commands = append(commands, *currentCmd)
+	}
+
+	return commands
+}
 
 func Save(basepath string, svg SVG) {
 	_ = os.MkdirAll(basepath, 0755)
 	path := basepath + "/" + svg.XMLName.Space + "_" + svg.XMLName.Local + ".svg"
 	out, _ := xml.MarshalIndent(svg, " ", "  ")
 	os.WriteFile(path, out, 0644)
+}
+
+func GetPathsInGroup(group Group) []Path {
+	paths := group.Paths
+	for _, g := range group.Groups {
+		paths = append(paths, GetPathsInGroup(g)...)
+	}
+	return paths
+}
+
+func GetPathsInSVG(svg SVG) []Path {
+	paths := make([]Path, 0)
+	for _, g := range svg.Groups {
+		paths = append(paths, GetPathsInGroup(g)...)
+	}
+	return paths
+}
+
+func GetPointFromBezier(bezier Bezier, t float64) Point {
+	x := math.Pow(1-t, 3)*bezier.P0.X + 3*math.Pow(1-t, 2)*t*bezier.P1.X + 3*(1-t)*t*t*bezier.P2.X + math.Pow(t, 3)*bezier.P3.X
+	y := math.Pow(1-t, 3)*bezier.P0.Y + 3*math.Pow(1-t, 2)*t*bezier.P1.Y + 3*(1-t)*t*t*bezier.P2.Y + math.Pow(t, 3)*bezier.P3.Y
+	return Point{X: x, Y: y}
+}
+
+func GetRotationFromBezier(bezier Bezier, t float64) float64 {
+	dx := 3*(1-t)*(1-t)*(bezier.P1.X-bezier.P0.X) + 6*(1-t)*t*(bezier.P2.X-bezier.P1.X) + 3*t*t*(bezier.P3.X-bezier.P2.X)
+	dy := 3*(1-t)*(1-t)*(bezier.P1.Y-bezier.P0.Y) + 6*(1-t)*t*(bezier.P2.Y-bezier.P1.Y) + 3*t*t*(bezier.P3.Y-bezier.P2.Y)
+	return math.Atan2(dy, dx) * 180 / math.Pi
+}
+
+func GetBeziersFromCommands(commands []Command) []Bezier {
+	results := make([]Bezier, 0)
+	current := Point{X: 0, Y: 0}
+	var zPoint *Point = nil
+	for _, command := range commands {
+		if command.Type == "M" {
+			current.X = command.Args[0]
+			current.Y = command.Args[1]
+		} else if command.Type == "m" {
+			current.X += command.Args[0]
+			current.Y += command.Args[1]
+		} else if command.Type == "c" {
+			for i := 0; i < len(command.Args); i += 6 {
+				b := Bezier{}
+				b.P0 = current
+				b.P1 = Point{X: current.X + command.Args[i+0], Y: current.Y + command.Args[i+1]}
+				b.P2 = Point{X: current.X + command.Args[i+2], Y: current.Y + command.Args[i+3]}
+				b.P3 = Point{X: current.X + command.Args[i+4], Y: current.Y + command.Args[i+5]}
+				current = b.P3
+				results = append(results, b)
+			}
+		} else if command.Type == "C" {
+			for i := 0; i < len(command.Args); i += 6 {
+				b := Bezier{}
+				b.P0 = current
+				b.P1 = Point{X: command.Args[i+0], Y: command.Args[i+1]}
+				b.P2 = Point{X: command.Args[i+2], Y: command.Args[i+3]}
+				b.P3 = Point{X: command.Args[i+4], Y: command.Args[i+5]}
+				current = b.P3
+				results = append(results, b)
+			}
+		} else if command.Type == "Z" || command.Type == "z" {
+			b := Bezier{}
+			b.P0 = current
+			b.P1 = current
+			b.P2 = *zPoint
+			b.P3 = *zPoint
+			results = append(results, b)
+			current = b.P3
+			zPoint = &current
+		} else {
+			panic("GetBeziersFromCommands: Unsupported command " + command.Type)
+		}
+
+		if zPoint == nil {
+			zPoint = &current
+		}
+	}
+	return results
 }
 
 // Search for elements named as the group and calculate their lower coordinates

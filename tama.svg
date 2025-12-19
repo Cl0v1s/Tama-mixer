@@ -169,14 +169,13 @@
          cy="32.042488"
          cx="91.276848" />
       <ellipse
-         style="fill:none;stroke:#003e85;stroke-width:0.52903;stroke-opacity:1"
-         id="path8-7-0"
-         cx="85.337227"
-         cy="-27.4233"
+         style="fill:none;fill-opacity:1;stroke:#003e85;stroke-width:0.386763;stroke-dasharray:none;stroke-opacity:1"
+         id="path10-97"
          inkscape:label="mouth"
-         rx="0.090000004"
-         ry="0.089945354"
-         transform="rotate(40.769806)" />
+         ry="1.3858356"
+         rx="1.6564597"
+         cy="34.354492"
+         cx="82.880989" />
       <ellipse
          style="fill:none;fill-opacity:1;stroke:#003e85;stroke-width:0.386763;stroke-dasharray:none;stroke-opacity:1"
          id="path10-9"

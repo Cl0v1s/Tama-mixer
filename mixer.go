@@ -1,9 +1,30 @@
 package main
 
 import (
+	"math"
 	"slices"
 	"strconv"
 )
+
+const RANGE = 5
+
+func findClosestPointInPaths(paths []Path, point Point) (float64, Bezier) {
+	for _, p := range paths {
+		commands := ParseD(p.D)
+		beziers := GetBeziersFromCommands(commands)
+		for _, b := range beziers {
+			// TODO: peut largement être optimisé
+			for i := 0.0; i < 1; i += 0.1 {
+				p := GetPointFromBezier(b, i)
+				d := math.Abs(p.X-point.X) + math.Abs(p.Y-point.Y)
+				if d <= RANGE {
+					return i, b
+				}
+			}
+		}
+	}
+	return -1, Bezier{}
+}
 
 func Place(body Body, bodyparts []BodyPart) SVG {
 	svg := body.Svg

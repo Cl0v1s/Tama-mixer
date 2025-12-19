@@ -5,8 +5,14 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"unicode"
 )
+
+type Bezier struct {
+	P0 Point
+	P1 Point
+	P2 Point
+	P3 Point
+}
 
 type Point struct {
 	X         float64
@@ -103,49 +109,4 @@ func MarshalD(cmd Command) string {
 	}
 
 	return b.String()
-}
-
-func ParseD(d string) []Command {
-	var currentCmd *Command = nil
-	commands := make([]Command, 0)
-	buffer := make([]rune, 0)
-	for i := 0; i < len(d); i++ {
-		c := rune(d[i])
-
-		if unicode.IsLetter(c) || c == ',' || c == ' ' {
-			if currentCmd != nil && len(buffer) > 0 {
-				number, err := strconv.ParseFloat(string(buffer), 64)
-				if err != nil {
-					panic(err)
-				}
-				currentCmd.Args = append(currentCmd.Args, number)
-			}
-			buffer = make([]rune, 0)
-		} else {
-			buffer = append(buffer, c)
-		}
-
-		if unicode.IsLetter(c) {
-			if currentCmd != nil {
-				commands = append(commands, *currentCmd)
-			}
-			currentCmd = &Command{
-				Type: string(c),
-				Args: make([]float64, 0),
-			}
-		}
-	}
-
-	if currentCmd != nil && len(buffer) > 0 {
-		number, err := strconv.ParseFloat(string(buffer), 64)
-		if err != nil {
-			panic(err)
-		}
-		currentCmd.Args = append(currentCmd.Args, number)
-	}
-	if currentCmd != nil {
-		commands = append(commands, *currentCmd)
-	}
-
-	return commands
 }
