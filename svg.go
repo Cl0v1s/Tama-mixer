@@ -81,7 +81,7 @@ func GetPathsInSVG(svg SVG) []Path {
 func GetPointFromBezier(bezier Bezier, t float64) Point {
 	x := math.Pow(1-t, 3)*bezier.P0.X + 3*math.Pow(1-t, 2)*t*bezier.P1.X + 3*(1-t)*t*t*bezier.P2.X + math.Pow(t, 3)*bezier.P3.X
 	y := math.Pow(1-t, 3)*bezier.P0.Y + 3*math.Pow(1-t, 2)*t*bezier.P1.Y + 3*(1-t)*t*t*bezier.P2.Y + math.Pow(t, 3)*bezier.P3.Y
-	return Point{X: x, Y: y}
+	return Point{X: math.Round(x*100) / 100, Y: math.Round(y*100) / 100}
 }
 
 func GetRotationFromBezier(bezier Bezier, t float64) float64 {
