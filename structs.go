@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/xml"
 	"fmt"
+	"math"
 	"strconv"
 	"strings"
 )
@@ -19,6 +20,10 @@ type Point struct {
 	Y         float64
 	Label     string
 	Transform string
+}
+
+func PointDistance(p1 Point, p2 Point) float64 {
+	return math.Abs(p1.X-p2.X) + math.Abs(p1.Y-p2.Y)
 }
 
 type Body struct {
