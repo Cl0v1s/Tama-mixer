@@ -10,6 +10,24 @@ import (
 	"unicode"
 )
 
+func findClosestPointInPaths(paths []Path, point Point, rng float64) (float64, Bezier) {
+	for _, p := range paths {
+		commands := ParseD(p.D)
+		beziers := GetBeziersFromCommands(commands)
+		for _, b := range beziers {
+			// TODO: peut largement être optimisé
+			for i := 0.0; i <= 1; i += 0.1 {
+				p := GetPointFromBezier(b, i)
+				d := math.Abs(p.X-point.X) + math.Abs(p.Y-point.Y)
+				if d <= rng {
+					return math.Round(i*100) / 100, b
+				}
+			}
+		}
+	}
+	return -1, Bezier{}
+}
+
 func ParseD(d string) []Command {
 	var currentCmd *Command = nil
 	commands := make([]Command, 0)
@@ -121,6 +139,22 @@ func GetBeziersFromCommands(commands []Command) []Bezier {
 				current = b.P3
 				results = append(results, b)
 			}
+		} else if command.Type == "L" {
+			b := Bezier{}
+			b.P0 = current
+			b.P1 = current
+			b.P2 = Point{X: command.Args[0], Y: command.Args[1]}
+			b.P3 = Point{X: command.Args[0], Y: command.Args[1]}
+			results = append(results, b)
+			current = b.P3
+		} else if command.Type == "l" {
+			b := Bezier{}
+			b.P0 = current
+			b.P1 = current
+			b.P2 = Point{X: command.Args[0] + current.X, Y: command.Args[1] + current.Y}
+			b.P3 = Point{X: command.Args[0] + current.X, Y: command.Args[1] + current.Y}
+			results = append(results, b)
+			current = b.P3
 		} else if command.Type == "Z" || command.Type == "z" {
 			b := Bezier{}
 			b.P0 = current
@@ -299,51 +333,67 @@ func CleanGroup(group *Group) {
 	group.Paths = slices.DeleteFunc(group.Paths, func(c Path) bool { return c.Label == group.Label })
 }
 
+func parseBody(group Group) Body {
+	anchors := RetrieveAnchors(&group, group.Label)
+	svg := SVG{
+		XMLName: xml.Name{
+			Space: group.ID,
+			Local: group.Label,
+		},
+		Xmlns:   "http://www.w3.org/2000/svg",
+		Width:   "100",
+		Height:  "100",
+		ViewBox: "-10 -10 100 100",
+		Groups:  []Group{group},
+	}
+	return Body{
+		Points: anchors,
+		Svg:    svg,
+	}
+}
+
+func parseBodypart(body Body, group Group) BodyPart {
+	anchorIndex := slices.IndexFunc(body.Points, func(p Point) bool { return p.Label == group.Label })
+	anchor := body.Points[anchorIndex]
+	paths := GetPathsInSVG(body.Svg)
+	t, b := findClosestPointInPaths(paths, anchor, 2)
+	if t >= 0 {
+		angle := GetRotationFromBezier(b, t) * -1
+		group.Transform = "rotate(" + strconv.FormatFloat(angle, 'f', -1, 64) + ")"
+	}
+	CleanGroup(&group)
+	svg := SVG{
+		XMLName: xml.Name{
+			Space: group.ID,
+			Local: group.Label,
+		},
+		Xmlns:   "http://www.w3.org/2000/svg",
+		Width:   "100",
+		Height:  "100",
+		ViewBox: "-10 -10 100 100",
+		Groups:  []Group{group},
+	}
+	return BodyPart{
+		Svg:   svg,
+		Label: group.Label,
+	}
+}
+
 func Sort(root SVG) ([]Body, []BodyPart) {
 	bodies := make([]Body, 0)
 	bodyparts := make([]BodyPart, 0)
 
 	for _, character := range root.Groups {
+		bodyIndex := slices.IndexFunc(character.Groups, func(g Group) bool { return g.Label == "body" })
+		body := parseBody(character.Groups[bodyIndex])
 		for _, group := range character.Groups {
 			x, y := FindLowestPadding(group, group.Label)
 			group = Unpad(group, x, y)
-
-			if group.Label == "body" {
-				anchors := RetrieveAnchors(&group, group.Label)
-				svg := SVG{
-					XMLName: xml.Name{
-						Space: group.ID,
-						Local: group.Label,
-					},
-					Xmlns:   "http://www.w3.org/2000/svg",
-					Width:   "100",
-					Height:  "100",
-					ViewBox: "-10 -10 100 100",
-					Groups:  []Group{group},
-				}
-				bodies = append(bodies, Body{
-					Svg:    svg,
-					Points: anchors,
-				})
-			} else {
-				CleanGroup(&group)
-				svg := SVG{
-					XMLName: xml.Name{
-						Space: group.ID,
-						Local: group.Label,
-					},
-					Xmlns:   "http://www.w3.org/2000/svg",
-					Width:   "100",
-					Height:  "100",
-					ViewBox: "-10 -10 100 100",
-					Groups:  []Group{group},
-				}
-				bodyparts = append(bodyparts, BodyPart{
-					Svg:   svg,
-					Label: group.Label,
-				})
+			if group.Label != "body" {
+				bodyparts = append(bodyparts, parseBodypart(body, group))
 			}
 		}
+		bodies = append(bodies, body)
 	}
 
 	return bodies, bodyparts
