@@ -359,7 +359,7 @@ func parseBodypart(body Body, group Group) BodyPart {
 	t, b := findClosestPointInPaths(paths, anchor, 2)
 	if t >= 0 {
 		angle := GetRotationFromBezier(b, t) * -1
-		group.Transform = "rotate(" + strconv.FormatFloat(angle, 'f', -1, 64) + ")"
+		group = GroupApplyTransformation(group, Transformation{Rotation: angle})
 	}
 	CleanGroup(&group)
 	svg := SVG{
