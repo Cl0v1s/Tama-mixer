@@ -80,6 +80,7 @@ type Group struct {
 
 func GroupApplyTransformation(group Group, t Transformation) Group {
 	paths := GetPathsInGroup(group)
+	results := make([]Path, 0)
 	for i := 0; i < len(paths); i++ {
 		commands := ParseD(paths[i].D)
 		beziers := GetBeziersFromCommands(commands)
@@ -94,9 +95,16 @@ func GroupApplyTransformation(group Group, t Transformation) Group {
 			beziers[u].P2 = PointRotate(beziers[u].P2, t.Rotation)
 			beziers[u].P3 = PointRotate(beziers[u].P3, t.Rotation)
 		}
-		paths[i].D = bezierToD(beziers)
+		p := Path{
+			ID:        paths[i].ID,
+			Label:     paths[i].Label,
+			Style:     paths[i].Style,
+			Transform: paths[i].Transform,
+			D:         bezierToD(beziers),
+		}
+		results = append(results, p)
 	}
-	group.Paths = paths
+	group.Paths = results
 	return group
 }
 

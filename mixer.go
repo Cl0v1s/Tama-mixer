@@ -75,19 +75,17 @@ func Place(body Body, bodyparts []BodyPart) SVG {
 		if index == -1 {
 			continue
 		}
-		// angle := 0.0
-		// location := point
-		t, _ := findClosestPointInPaths(GetPathsInSVG(svg), point, 2)
+		angle := 0.0
+		location := point
+		t, bezier := findClosestPointInPaths(GetPathsInSVG(svg), point, 2)
 		if t >= 0 {
-			// angle = GetRotationFromBezier(bezier, t)
-			// location = GetPointFromBezier(bezier, t)
+			angle = GetRotationFromBezier(bezier, t)
+			location = GetPointFromBezier(bezier, t)
 		}
 		for _, group := range bodyparts[index].Svg.Groups {
-			group.Transform = ""
-			// group.Rotation += angle
-			// group.Translation = location
-			// group = GroupApplyTransformations(group)
-			group = mergePaths(body, group, 3)
+			group = GroupApplyTransformation(group, Transformation{Rotation: angle})
+			group = GroupApplyTransformation(group, Transformation{Translation: location})
+			// group = mergePaths(body, group, 3)
 			svg.Groups = append(svg.Groups, group)
 		}
 	}

@@ -192,16 +192,17 @@ func FindLowestPadding(g Group, anchorLabel string) (float64, float64) {
 			continue
 		}
 		cmds := ParseD(p.D)
-		for _, cmd := range cmds {
-			if strings.ToLower(cmd.Type) != "m" {
-				continue
-			}
-			x1, y1 := cmd.Args[0], cmd.Args[1]
-			if x1 < x {
-				x = x1
-			}
-			if y1 < y {
-				y = y1
+		beziers := GetBeziersFromCommands(cmds)
+		for _, bezier := range beziers {
+			points := []Point{bezier.P0, bezier.P1, bezier.P2, bezier.P3}
+			for _, point := range points {
+				x1, y1 := point.X, point.Y
+				if x1 < x {
+					x = x1
+				}
+				if y1 < y {
+					y = y1
+				}
 			}
 		}
 	}
@@ -333,6 +334,8 @@ func CleanGroup(group *Group) {
 }
 
 func parseBody(group Group) Body {
+	x, y := FindLowestPadding(group, "body")
+	group = Unpad(group, x, y)
 	anchors := RetrieveAnchors(&group, group.Label)
 	svg := SVG{
 		XMLName: xml.Name{
@@ -342,7 +345,7 @@ func parseBody(group Group) Body {
 		Xmlns:   "http://www.w3.org/2000/svg",
 		Width:   "100",
 		Height:  "100",
-		ViewBox: "-10 -10 100 100",
+		ViewBox: "0 0 100 100",
 		Groups:  []Group{group},
 	}
 	return Body{
@@ -352,6 +355,8 @@ func parseBody(group Group) Body {
 }
 
 func parseBodypart(body Body, group Group) BodyPart {
+	x, y := FindLowestPadding(group, group.Label)
+	group = Unpad(group, x, y)
 	anchorIndex := slices.IndexFunc(body.Points, func(p Point) bool { return p.Label == group.Label })
 	anchor := body.Points[anchorIndex]
 	paths := GetPathsInSVG(body.Svg)
@@ -369,7 +374,7 @@ func parseBodypart(body Body, group Group) BodyPart {
 		Xmlns:   "http://www.w3.org/2000/svg",
 		Width:   "100",
 		Height:  "100",
-		ViewBox: "-10 -10 100 100",
+		ViewBox: "0 0 100 100",
 		Groups:  []Group{group},
 	}
 	return BodyPart{
@@ -386,8 +391,6 @@ func Sort(root SVG) ([]Body, []BodyPart) {
 		bodyIndex := slices.IndexFunc(character.Groups, func(g Group) bool { return g.Label == "body" })
 		body := parseBody(character.Groups[bodyIndex])
 		for _, group := range character.Groups {
-			x, y := FindLowestPadding(group, group.Label)
-			group = Unpad(group, x, y)
 			if group.Label != "body" {
 				bodyparts = append(bodyparts, parseBodypart(body, group))
 			}
