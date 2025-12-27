@@ -333,13 +333,13 @@ func CleanGroup(group *Group) {
 	group.Paths = slices.DeleteFunc(group.Paths, func(c Path) bool { return c.Label == group.Label })
 }
 
-func parseBody(group Group) Body {
+func parseBody(name string, group Group) Body {
 	x, y := FindLowestPadding(group, "body")
 	group = Unpad(group, x, y)
 	anchors := RetrieveAnchors(&group, group.Label)
 	svg := SVG{
 		XMLName: xml.Name{
-			Space: group.ID,
+			Space: name,
 			Local: group.Label,
 		},
 		Xmlns:   "http://www.w3.org/2000/svg",
@@ -389,7 +389,7 @@ func Sort(root SVG) ([]Body, []BodyPart) {
 
 	for _, character := range root.Groups {
 		bodyIndex := slices.IndexFunc(character.Groups, func(g Group) bool { return g.Label == "body" })
-		body := parseBody(character.Groups[bodyIndex])
+		body := parseBody(character.Label, character.Groups[bodyIndex])
 		for _, group := range character.Groups {
 			if group.Label != "body" {
 				bodyparts = append(bodyparts, parseBodypart(body, group))

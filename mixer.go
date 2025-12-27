@@ -18,29 +18,39 @@ func bezierToD(beziers []Bezier) string {
 	return result
 }
 
-func Place(body Body, bodyparts []BodyPart) SVG {
-	svg := body.Svg
+func Mix(bodies []Body, bodyparts []BodyPart) []Body {
+	ready := make([]Body, 0)
+	bucket := make([]Body, 0)
 
-	for _, point := range body.Points {
-		index := slices.IndexFunc(bodyparts, func(part BodyPart) bool {
-			return part.Label == point.Label
-		})
-		if index == -1 {
-			continue
-		}
-		angle := 0.0
-		location := point
-		t, bezier := findClosestPointInPaths(GetPathsInSVG(svg), point, 2)
-		if t >= 0 {
-			angle = GetRotationFromBezier(bezier, t)
-			location = GetPointFromBezier(bezier, t)
-		}
-		for _, group := range bodyparts[index].Svg.Groups {
-			group = GroupApplyTransformation(group, Transformation{Rotation: angle})
-			group = GroupApplyTransformation(group, Transformation{Translation: location})
-			svg.Groups = append(svg.Groups, group)
+	// we mix all existing bodypart with all compatible bodies
+	for _, part := range bodyparts {
+		for _, b := range bodies {
+			if !BodyIsCompatible(b, part.Label) {
+				continue
+			}
+			body := BodyCopy(b)
+			body.Parts = append(body.Parts, part)
+			bucket = append(bucket, body)
+
 		}
 	}
 
-	return svg
+	for len(bucket) > 0 {
+		body := bucket[0]
+		err, point := BodyGetMissingPart(body)
+		if err != nil {
+			ready = append(ready, body)
+		} else {
+			pretendants := make([]BodyPart, len(bodyparts))
+			copy(pretendants, bodyparts)
+			pretendants = slices.DeleteFunc(pretendants, func(p BodyPart) bool { return p.Label != point.Label })
+			for _, pr := range pretendants {
+				c := BodyCopy(body)
+				c.Parts = append(c.Parts, pr)
+				bucket = append(bucket, c)
+			}
+		}
+		bucket = bucket[1:]
+	}
+	return ready
 }

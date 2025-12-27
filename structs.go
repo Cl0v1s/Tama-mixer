@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -44,6 +45,82 @@ func PointTranslate(p Point, t Point) Point {
 type Body struct {
 	Svg    SVG
 	Points []Point
+	Parts  []BodyPart
+}
+
+func BodyCopy(body Body) Body {
+	points := make([]Point, len(body.Points))
+	copy(points, body.Points)
+	parts := make([]BodyPart, len(body.Parts))
+	copy(parts, body.Parts)
+	svg := body.Svg
+	return Body{
+		Svg:    svg,
+		Points: points,
+		Parts:  parts,
+	}
+}
+
+func BodyAssemble(body Body) Body {
+	svg := SVGCopy(body.Svg)
+	label := ""
+	for _, point := range body.Points {
+		index := slices.IndexFunc(body.Parts, func(part BodyPart) bool {
+			return part.Label == point.Label
+		})
+		if index == -1 {
+			continue
+		}
+		angle := 0.0
+		location := point
+		t, bezier := findClosestPointInPaths(GetPathsInSVG(svg), point, 2)
+		if t >= 0 {
+			angle = GetRotationFromBezier(bezier, t)
+			location = GetPointFromBezier(bezier, t)
+		}
+		for _, group := range body.Parts[index].Svg.Groups {
+			group = GroupApplyTransformation(group, Transformation{Rotation: angle})
+			group = GroupApplyTransformation(group, Transformation{Translation: location})
+			svg.Groups = append(svg.Groups, group)
+		}
+		label += body.Parts[index].Svg.XMLName.Space
+	}
+	svg.XMLName.Local = label
+	body.Svg = svg
+	// we prevent further assemble
+	body.Points = make([]Point, 0)
+	body.Parts = make([]BodyPart, 0)
+	return body
+}
+
+func BodyIsCompatible(body Body, label string) bool {
+	index := slices.IndexFunc(body.Points, func(p Point) bool { return p.Label == label })
+	if index == -1 {
+		return false
+	}
+	return true
+}
+
+func BodyGetBodypart(body Body, label string) (error, BodyPart) {
+	index := slices.IndexFunc(body.Parts, func(p BodyPart) bool { return p.Label == label })
+	if index == -1 {
+		return fmt.Errorf("Body does not have a part named %s", label), BodyPart{}
+	}
+	return nil, body.Parts[index]
+}
+
+func BodyGetMissingPart(body Body) (error, Point) {
+	index := slices.IndexFunc(body.Points, func(p Point) bool {
+		err, _ := BodyGetBodypart(body, p.Label)
+		if err != nil {
+			return true
+		}
+		return false
+	})
+	if index == -1 {
+		return fmt.Errorf("Body is complete."), Point{}
+	}
+	return nil, body.Points[index]
 }
 
 type BodyPart struct {
@@ -61,6 +138,16 @@ type SVG struct {
 	Groups []Group `xml:"g"`
 }
 
+func SVGCopy(svg SVG) SVG {
+	s := svg
+	groups := make([]Group, 0)
+	for _, g := range svg.Groups {
+		groups = append(groups, GroupCopy(g))
+	}
+	s.Groups = groups
+	return s
+}
+
 type Transformation struct {
 	Rotation    float64
 	Translation Point
@@ -76,6 +163,25 @@ type Group struct {
 	Paths    []Path    `xml:"path"`
 	Ellipses []Ellipse `xml:"ellipse"`
 	Circles  []Circle  `xml:"circle"`
+}
+
+func GroupCopy(group Group) Group {
+	g := group
+	groups := make([]Group, 0)
+	for _, gg := range group.Groups {
+		groups = append(groups, GroupCopy(gg))
+	}
+	paths := make([]Path, len(group.Paths))
+	copy(paths, group.Paths)
+	g.Paths = paths
+	ellipses := make([]Ellipse, len(group.Ellipses))
+	copy(ellipses, group.Ellipses)
+	g.Ellipses = ellipses
+	circles := make([]Circle, len(group.Circles))
+	copy(circles, group.Circles)
+	g.Circles = circles
+
+	return g
 }
 
 func GroupApplyTransformation(group Group, t Transformation) Group {

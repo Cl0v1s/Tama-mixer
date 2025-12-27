@@ -27,7 +27,15 @@ func main() {
 
 	for _, body := range bodies {
 		Save("bodies", body.Svg)
-		s := Place(body, bodyparts)
-		Save("generated", s)
 	}
+
+	bodies = Mix(bodies, bodyparts)
+	for i := 0; i < len(bodies); i++ {
+		bodies[i] = BodyAssemble(bodies[i])
+	}
+
+	for _, body := range bodies {
+		Save("generated", body.Svg)
+	}
+
 }

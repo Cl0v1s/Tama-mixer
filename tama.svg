@@ -23,15 +23,15 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
-     inkscape:zoom="12.789141"
-     inkscape:cx="320.34991"
-     inkscape:cy="123.11226"
+     inkscape:zoom="4.5216442"
+     inkscape:cx="102.50696"
+     inkscape:cy="115.77647"
      inkscape:window-width="2560"
      inkscape:window-height="1371"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="g7" />
+     inkscape:current-layer="layer1" />
   <defs
      id="defs1" />
   <g
@@ -57,7 +57,7 @@
          inkscape:label="path" />
     </g>
     <g
-       id="leg2"
+       id="spag-right-2"
        inkscape:label="leg2">
       <path
          style="fill:none;stroke:#003e85;stroke-width:0.79375"
@@ -68,6 +68,25 @@
       <ellipse
          style="fill:none;stroke:#000000;stroke-width:2.09021;stroke-opacity:1"
          id="path8-3-3"
+         cx="45.153343"
+         cy="35.325634"
+         inkscape:label="leg2"
+         rx="0.41881433"
+         ry="0.30173001" />
+    </g>
+    <g
+       id="spag-right-1"
+       inkscape:label="leg2"
+       transform="rotate(-14.647119,44.48504,35.652689)">
+      <path
+         style="fill:none;stroke:#003e85;stroke-width:0.79375"
+         d="m 44.687901,35.368292 c 0,0 15.871853,-4.743431 17.453532,-2.088427 1.763904,2.960884 -9.251082,16.910087 -9.251082,16.910087 l 5.712365,-0.0683"
+         id="path4-0"
+         sodipodi:nodetypes="cscc"
+         inkscape:label="path" />
+      <ellipse
+         style="fill:none;stroke:#000000;stroke-width:2.09021;stroke-opacity:1"
+         id="path8-3-3-9"
          cx="45.153343"
          cy="35.325634"
          inkscape:label="leg2"
@@ -93,7 +112,7 @@
          ry="0.089945354" />
     </g>
     <g
-       id="leg1"
+       id="spag-left-2"
        inkscape:label="leg1">
       <path
          style="fill:none;stroke:#003e85;stroke-width:0.79375"
@@ -104,6 +123,25 @@
       <ellipse
          style="fill:none;fill-opacity:1;stroke:#003e85;stroke-width:0.79375"
          id="path9"
+         cx="26.233734"
+         cy="37.285839"
+         rx="0.76583886"
+         ry="0.85593754"
+         inkscape:label="leg1" />
+    </g>
+    <g
+       id="spag-left-1"
+       inkscape:label="leg1"
+       transform="rotate(18.493025,26.324689,36.986854)">
+      <path
+         style="fill:none;stroke:#003e85;stroke-width:0.79375"
+         d="m 26.162962,37.133787 c 0,0 -11.325749,-5.648529 -12.437731,-3.385871 -1.296116,2.637334 6.687739,16.475582 6.687739,16.475582 l -4.161323,0.02535"
+         id="path5-5"
+         sodipodi:nodetypes="cscc"
+         inkscape:label="path" />
+      <ellipse
+         style="fill:none;fill-opacity:1;stroke:#003e85;stroke-width:0.79375"
+         id="path9-6"
          cx="26.233734"
          cy="37.285839"
          rx="0.76583886"
