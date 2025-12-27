@@ -163,13 +163,12 @@ func GetBeziersFromCommands(commands []Command) []Bezier {
 			b.P3 = *zPoint
 			results = append(results, b)
 			current = b.P3
-			zPoint = &current
+			zPoint = nil
 		} else {
 			panic("GetBeziersFromCommands: Unsupported command " + command.Type)
 		}
-
 		if zPoint == nil {
-			zPoint = &current
+			zPoint = &Point{X: current.X, Y: current.Y}
 		}
 	}
 	return results
