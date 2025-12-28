@@ -23,15 +23,15 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
-     inkscape:zoom="2.2608221"
-     inkscape:cx="228.0144"
-     inkscape:cy="151.05125"
+     inkscape:zoom="72.346307"
+     inkscape:cx="199.49878"
+     inkscape:cy="19.607082"
      inkscape:window-width="1680"
      inkscape:window-height="1013"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer1" />
+     inkscape:current-layer="eye-dull" />
   <defs
      id="defs1" />
   <g
@@ -39,7 +39,7 @@
      inkscape:groupmode="layer"
      id="layer1">
     <g
-       id="mouth"
+       id="duckface-1"
        inkscape:label="mouth">
       <ellipse
          style="fill:none;stroke:none;stroke-width:0.52903"
@@ -53,6 +53,25 @@
          style="fill:none;stroke:#003e85;stroke-width:1.05715"
          d="m 19.829101,14.123737 c 0,0 -4.49345,-1.318558 -6.578528,-0.507048 -0.843157,0.328156 -2.666533,1.310354 -2.024162,2.028188 1.234839,1.379903 8.836053,0.638468 8.836053,0.638468 0,0 -7.798679,1.086497 -8.330013,1.643245 -0.707129,0.740952 1.382069,1.72642 2.313329,1.94368 2.183934,0.509505 6.506237,-1.774665 6.506237,-1.774665 z"
          id="path3"
+         sodipodi:nodetypes="csscsscc"
+         inkscape:label="path" />
+    </g>
+    <g
+       id="duckface-2"
+       inkscape:label="mouth"
+       transform="translate(-5.4244253,8.1472094)">
+      <ellipse
+         style="fill:none;stroke:none;stroke-width:0.52903"
+         id="path8-7-60"
+         cx="20.174601"
+         cy="16.23093"
+         inkscape:label="mouth"
+         rx="0.090000004"
+         ry="0.089945354" />
+      <path
+         style="fill:none;stroke:#003e85;stroke-width:1.05715"
+         d="m 19.829101,14.123737 c 0,0 -4.203816,-2.518469 -6.288894,-1.706959 -0.843157,0.328156 -2.666533,1.310354 -2.024162,2.028188 1.234839,1.379903 8.546419,1.838379 8.546419,1.838379 0,0 -7.633174,1.748517 -8.164508,2.305265 -0.707129,0.740952 1.382069,1.72642 2.313329,1.94368 2.183934,0.509505 6.340732,-2.436685 6.340732,-2.436685 z"
+         id="path3-6"
          sodipodi:nodetypes="csscsscc"
          inkscape:label="path" />
     </g>
@@ -94,8 +113,8 @@
          ry="0.30173001" />
     </g>
     <g
-       id="eye1"
-       inkscape:label="eye1">
+       id="eye-happy"
+       inkscape:label="eye">
       <path
          style="fill:none;stroke:#003e85;stroke-width:0.79375"
          d="m 37.35207,15.62284 c 0,0 0.527185,-3.232544 1.744681,-3.330758 1.217496,-0.09821 2.141202,2.854935 2.141202,2.854935"
@@ -107,7 +126,47 @@
          id="path8-73"
          cx="39.155121"
          cy="12.337648"
-         inkscape:label="eye1"
+         inkscape:label="eye"
+         rx="0.090000004"
+         ry="0.089945354" />
+    </g>
+    <g
+       id="eye-angry"
+       inkscape:label="eye"
+       transform="translate(17.314675,-1.6662069)"
+       style="display:inline">
+      <path
+         style="fill:none;stroke:#003e85;stroke-width:0.79375"
+         d="M 34.766652,12.672425 38.326157,11.35653"
+         id="path2-9"
+         sodipodi:nodetypes="cc"
+         inkscape:label="path" />
+      <ellipse
+         style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.52903"
+         id="path8-73-2"
+         cx="36.597782"
+         cy="12.038711"
+         inkscape:label="eye"
+         rx="0.090000004"
+         ry="0.089945354" />
+    </g>
+    <g
+       id="eye-dull"
+       inkscape:label="eye"
+       transform="translate(16.600023,-7.0778601)"
+       style="display:inline">
+      <path
+         style="fill:none;stroke:#003e85;stroke-width:0.79375"
+         d="m 34.905422,12.310453 c -0.01937,-1.000496 -0.02688,-0.998169 1.132579,-1.01337 1.159461,-0.0152 1.15513,-0.01307 1.19667,1.001923 0.04154,1.014995 -0.03611,1.008329 -1.179686,1.008987 -1.143579,6.57e-4 -1.130192,0.003 -1.149563,-0.99754 z"
+         id="path2-9-2"
+         sodipodi:nodetypes="zzzzz"
+         inkscape:label="path" />
+      <ellipse
+         style="fill:#000000;fill-opacity:1;stroke:none;stroke-width:0.52903"
+         id="path8-73-2-9"
+         cx="36.075775"
+         cy="12.290105"
+         inkscape:label="eye"
          rx="0.090000004"
          ry="0.089945354" />
     </g>
@@ -156,7 +215,7 @@
          id="path8-73-1"
          cx="39.159039"
          cy="12.331703"
-         inkscape:label="eye1"
+         inkscape:label="eye"
          rx="0.20279902"
          ry="0.14422952" />
       <ellipse
@@ -201,7 +260,7 @@
       <ellipse
          style="fill:none;fill-opacity:1;stroke:#003e85;stroke-width:0.386763;stroke-dasharray:none;stroke-opacity:1"
          id="path10"
-         inkscape:label="eye1"
+         inkscape:label="eye"
          ry="1.3858356"
          rx="1.6564597"
          cy="32.042488"

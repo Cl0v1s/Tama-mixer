@@ -20,16 +20,6 @@ const (
 	BodypartType_Arm2               = "arm2"
 )
 
-type Animation string
-
-const (
-	Animation_Idle     Animation = "idle"
-	Animation_Walking            = "walking"
-	Animation_Eating             = "eating"
-	Animation_Sleeping           = "sleeping"
-	Animation_Angry              = "angry"
-)
-
 type Bezier struct {
 	P0 Point
 	P1 Point

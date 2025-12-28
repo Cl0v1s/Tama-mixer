@@ -33,10 +33,11 @@ func ParseD(d string) []Command {
 	var currentCmd *Command = nil
 	commands := make([]Command, 0)
 	buffer := make([]rune, 0)
+	lastRune := ' '
 	for i := 0; i < len(d); i++ {
 		c := rune(d[i])
 
-		if unicode.IsLetter(c) || c == ',' || c == ' ' {
+		if (unicode.IsLetter(c) && lastRune == ' ') || c == ',' || c == ' ' {
 			if currentCmd != nil && len(buffer) > 0 {
 				number, err := strconv.ParseFloat(string(buffer), 64)
 				if err != nil {
@@ -49,7 +50,7 @@ func ParseD(d string) []Command {
 			buffer = append(buffer, c)
 		}
 
-		if unicode.IsLetter(c) {
+		if unicode.IsLetter(c) && lastRune == ' ' {
 			if currentCmd != nil {
 				commands = append(commands, *currentCmd)
 			}
@@ -58,6 +59,7 @@ func ParseD(d string) []Command {
 				Args: make([]float64, 0),
 			}
 		}
+		lastRune = c
 	}
 
 	if currentCmd != nil && len(buffer) > 0 {
@@ -117,9 +119,27 @@ func GetBeziersFromCommands(commands []Command) []Bezier {
 		if command.Type == "M" {
 			current.X = command.Args[0]
 			current.Y = command.Args[1]
+			// for i := 0; i < len(command.Args); i += 2 {
+			// 	b := Bezier{}
+			// 	b.P0 = current
+			// 	b.P1 = current
+			// 	b.P2 = Point{X: command.Args[i], Y: command.Args[i+1]}
+			// 	b.P3 = Point{X: command.Args[i], Y: command.Args[i+1]}
+			// 	current = b.P3
+			// 	results = append(results, b)
+			// }
 		} else if command.Type == "m" {
 			current.X += command.Args[0]
 			current.Y += command.Args[1]
+			// for i := 0; i < len(command.Args); i += 2 {
+			// 	b := Bezier{}
+			// 	b.P0 = current
+			// 	b.P1 = current
+			// 	b.P2 = Point{X: current.X + command.Args[i], Y: current.Y + command.Args[i+1]}
+			// 	b.P3 = Point{X: current.X + command.Args[i], Y: current.Y + command.Args[i+1]}
+			// 	current = b.P3
+			// 	results = append(results, b)
+			// }
 		} else if command.Type == "c" {
 			for i := 0; i < len(command.Args); i += 6 {
 				b := Bezier{}
@@ -344,9 +364,9 @@ func parseBody(name string, group Group) Body {
 			Local: name,
 		},
 		Xmlns:   "http://www.w3.org/2000/svg",
-		Width:   "100",
-		Height:  "100",
-		ViewBox: "0 0 100 100",
+		Width:   "75",
+		Height:  "75",
+		ViewBox: "-25 -25 75 75",
 		Groups:  []Group{group},
 	}
 	return Body{
