@@ -23,15 +23,15 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
-     inkscape:zoom="72.346307"
-     inkscape:cx="199.49878"
-     inkscape:cy="19.607082"
-     inkscape:window-width="1680"
-     inkscape:window-height="1013"
+     inkscape:zoom="2.2608221"
+     inkscape:cx="273.35189"
+     inkscape:cy="220.49501"
+     inkscape:window-width="2560"
+     inkscape:window-height="1371"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="eye-dull" />
+     inkscape:current-layer="layer2" />
   <defs
      id="defs1" />
   <g
@@ -276,7 +276,7 @@
       <ellipse
          style="fill:none;fill-opacity:1;stroke:#003e85;stroke-width:0.386763;stroke-dasharray:none;stroke-opacity:1"
          id="path10-9"
-         inkscape:label="eye1"
+         inkscape:label="eye"
          ry="1.3858356"
          rx="1.6564597"
          cy="33.172215"

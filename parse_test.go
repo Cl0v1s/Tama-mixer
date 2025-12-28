@@ -53,6 +53,23 @@ func TestGetBeziersFromCommandsZ(t *testing.T) {
 	}
 }
 
+func TestGetBeziersFromCommandsM(t *testing.T) {
+	const pathWithMs = "M 34,12 38,11"
+	got := GetBeziersFromCommands(ParseD(pathWithMs))
+	if len(got) != 1 {
+		t.Error("len(got) must be 1")
+	}
+	wantStart := Point{X: 34, Y: 12}
+	wantEnd := Point{X: 38, Y: 11}
+	if got[0].P0.X != wantStart.X && got[0].P0.Y != wantStart.Y {
+		t.Error("got[0].P0 is different from wantStart")
+	}
+	if got[0].P3.X != wantEnd.X && got[0].P3.Y != wantEnd.Y {
+		t.Error("got[0].P3 is different from wantEnd")
+	}
+
+}
+
 func TestGetBeziersFromCommandsComplex(t *testing.T) {
 	beziers := GetBeziersFromCommands(ParseD(complexPath))
 	if len(beziers) != 12 {

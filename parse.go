@@ -119,27 +119,29 @@ func GetBeziersFromCommands(commands []Command) []Bezier {
 		if command.Type == "M" {
 			current.X = command.Args[0]
 			current.Y = command.Args[1]
-			// for i := 0; i < len(command.Args); i += 2 {
-			// 	b := Bezier{}
-			// 	b.P0 = current
-			// 	b.P1 = current
-			// 	b.P2 = Point{X: command.Args[i], Y: command.Args[i+1]}
-			// 	b.P3 = Point{X: command.Args[i], Y: command.Args[i+1]}
-			// 	current = b.P3
-			// 	results = append(results, b)
-			// }
+			rest := command.Args[2:]
+			for i := 0; i < len(rest); i += 2 {
+				b := Bezier{}
+				b.P0 = current
+				b.P1 = current
+				b.P2 = Point{X: rest[i], Y: rest[i+1]}
+				b.P3 = b.P2
+				current = b.P3
+				results = append(results, b)
+			}
 		} else if command.Type == "m" {
 			current.X += command.Args[0]
 			current.Y += command.Args[1]
-			// for i := 0; i < len(command.Args); i += 2 {
-			// 	b := Bezier{}
-			// 	b.P0 = current
-			// 	b.P1 = current
-			// 	b.P2 = Point{X: current.X + command.Args[i], Y: current.Y + command.Args[i+1]}
-			// 	b.P3 = Point{X: current.X + command.Args[i], Y: current.Y + command.Args[i+1]}
-			// 	current = b.P3
-			// 	results = append(results, b)
-			// }
+			rest := command.Args[2:]
+			for i := 0; i < len(rest); i += 2 {
+				b := Bezier{}
+				b.P0 = current
+				b.P1 = current
+				b.P2 = Point{X: current.X + rest[i], Y: current.Y + rest[i+1]}
+				b.P3 = b.P2
+				current = b.P3
+				results = append(results, b)
+			}
 		} else if command.Type == "c" {
 			for i := 0; i < len(command.Args); i += 6 {
 				b := Bezier{}
@@ -276,8 +278,10 @@ func Unpad(g Group, x float64, y float64) Group {
 		d := ""
 		for i := 0; i < len(cmds); i++ {
 			if strings.ToLower(cmds[i].Type) == "m" {
-				cmds[i].Args[0] -= x
-				cmds[i].Args[1] -= y
+				for u := 0; u < len(cmds[i].Args); u += 2 {
+					cmds[i].Args[u] -= x
+					cmds[i].Args[u+1] -= y
+				}
 			}
 			d = d + " " + MarshalD(cmds[i])
 		}
