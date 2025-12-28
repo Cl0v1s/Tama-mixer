@@ -22,11 +22,11 @@ func main() {
 	bodies, bodyparts := Sort(svg)
 
 	for _, bodypart := range bodyparts {
-		Save("bodyparts", bodypart.Svg)
+		Save("out/bodyparts", bodypart.Svg)
 	}
 
 	for _, body := range bodies {
-		Save("bodies", body.Svg)
+		Save("out/bodies", body.Svg)
 	}
 
 	bodies = Mix(bodies, bodyparts)
@@ -35,7 +35,7 @@ func main() {
 	}
 
 	for _, body := range bodies {
-		Save("generated", body.Svg)
+		Save("out/generated", body.Svg)
 	}
 
 }

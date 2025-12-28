@@ -25,7 +25,7 @@ func Mix(bodies []Body, bodyparts []BodyPart) []Body {
 	// we mix all existing bodypart with all compatible bodies
 	for _, part := range bodyparts {
 		for _, b := range bodies {
-			if !BodyIsCompatible(b, part.Label) {
+			if !BodyIsCompatible(b, part.Type) {
 				continue
 			}
 			body := BodyCopy(b)
@@ -43,7 +43,7 @@ func Mix(bodies []Body, bodyparts []BodyPart) []Body {
 		} else {
 			pretendants := make([]BodyPart, len(bodyparts))
 			copy(pretendants, bodyparts)
-			pretendants = slices.DeleteFunc(pretendants, func(p BodyPart) bool { return p.Label != point.Label })
+			pretendants = slices.DeleteFunc(pretendants, func(p BodyPart) bool { return p.Type != point.Type })
 			for _, pr := range pretendants {
 				c := BodyCopy(body)
 				c.Parts = append(c.Parts, pr)

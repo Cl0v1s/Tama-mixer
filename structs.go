@@ -9,6 +9,27 @@ import (
 	"strings"
 )
 
+type BodypartType string
+
+const (
+	BodypartType_Leg1  BodypartType = "leg1"
+	BodypartType_Leg2               = "leg2"
+	BodypartType_Mouth              = "mouth"
+	BodypartType_Eye                = "eye"
+	BodypartType_Arm1               = "arm1"
+	BodypartType_Arm2               = "arm2"
+)
+
+type Animation string
+
+const (
+	Animation_Idle     Animation = "idle"
+	Animation_Walking            = "walking"
+	Animation_Eating             = "eating"
+	Animation_Sleeping           = "sleeping"
+	Animation_Angry              = "angry"
+)
+
 type Bezier struct {
 	P0 Point
 	P1 Point
@@ -19,7 +40,7 @@ type Bezier struct {
 type Point struct {
 	X         float64
 	Y         float64
-	Label     string
+	Type      BodypartType
 	Transform string
 }
 
@@ -66,7 +87,7 @@ func BodyAssemble(body Body) Body {
 	label := ""
 	for _, point := range body.Points {
 		index := slices.IndexFunc(body.Parts, func(part BodyPart) bool {
-			return part.Label == point.Label
+			return part.Type == point.Type
 		})
 		if index == -1 {
 			continue
@@ -83,8 +104,9 @@ func BodyAssemble(body Body) Body {
 			group = GroupApplyTransformation(group, Transformation{Translation: location})
 			svg.Groups = append(svg.Groups, group)
 		}
-		label += body.Parts[index].Svg.XMLName.Space
+		label += body.Parts[index].Svg.XMLName.Local
 	}
+	svg.XMLName.Space = svg.XMLName.Local
 	svg.XMLName.Local = label
 	body.Svg = svg
 	// we prevent further assemble
@@ -93,25 +115,25 @@ func BodyAssemble(body Body) Body {
 	return body
 }
 
-func BodyIsCompatible(body Body, label string) bool {
-	index := slices.IndexFunc(body.Points, func(p Point) bool { return p.Label == label })
+func BodyIsCompatible(body Body, tpe BodypartType) bool {
+	index := slices.IndexFunc(body.Points, func(p Point) bool { return p.Type == tpe })
 	if index == -1 {
 		return false
 	}
 	return true
 }
 
-func BodyGetBodypart(body Body, label string) (error, BodyPart) {
-	index := slices.IndexFunc(body.Parts, func(p BodyPart) bool { return p.Label == label })
+func BodyGetBodypart(body Body, tpe BodypartType) (error, BodyPart) {
+	index := slices.IndexFunc(body.Parts, func(p BodyPart) bool { return p.Type == tpe })
 	if index == -1 {
-		return fmt.Errorf("Body does not have a part named %s", label), BodyPart{}
+		return fmt.Errorf("Body does not have a part named %s", tpe), BodyPart{}
 	}
 	return nil, body.Parts[index]
 }
 
 func BodyGetMissingPart(body Body) (error, Point) {
 	index := slices.IndexFunc(body.Points, func(p Point) bool {
-		err, _ := BodyGetBodypart(body, p.Label)
+		err, _ := BodyGetBodypart(body, p.Type)
 		if err != nil {
 			return true
 		}
@@ -124,8 +146,8 @@ func BodyGetMissingPart(body Body) (error, Point) {
 }
 
 type BodyPart struct {
-	Svg   SVG
-	Label string
+	Svg  SVG
+	Type BodypartType
 }
 
 type SVG struct {

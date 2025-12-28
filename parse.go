@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/xml"
+	"fmt"
 	"math"
 	"os"
 	"slices"
@@ -290,7 +291,7 @@ func RetrieveAnchors(group *Group, rootLabel string) []Point {
 			group.Ellipses[i] = e
 			i++
 		} else {
-			points = append(points, Point{X: e.CX, Y: e.CY, Label: e.Label, Transform: e.Transform})
+			points = append(points, Point{X: e.CX, Y: e.CY, Type: BodypartType(e.Label), Transform: e.Transform})
 		}
 	}
 	group.Ellipses = group.Ellipses[:i]
@@ -300,7 +301,7 @@ func RetrieveAnchors(group *Group, rootLabel string) []Point {
 			group.Circles[i] = e
 			i++
 		} else {
-			points = append(points, Point{X: e.CX, Y: e.CY, Label: e.Label, Transform: e.Transform})
+			points = append(points, Point{X: e.CX, Y: e.CY, Type: BodypartType(e.Label), Transform: e.Transform})
 		}
 	}
 	group.Circles = group.Circles[:i]
@@ -317,7 +318,7 @@ func RetrieveAnchors(group *Group, rootLabel string) []Point {
 			if index == -1 {
 				continue
 			}
-			points = append(points, Point{X: commands[index].Args[0], Y: commands[index].Args[1], Label: p.Label, Transform: p.Transform})
+			points = append(points, Point{X: commands[index].Args[0], Y: commands[index].Args[1], Type: BodypartType(p.Label), Transform: p.Transform})
 		}
 	}
 	group.Paths = group.Paths[:i]
@@ -339,8 +340,8 @@ func parseBody(name string, group Group) Body {
 	anchors := RetrieveAnchors(&group, group.Label)
 	svg := SVG{
 		XMLName: xml.Name{
-			Space: name,
-			Local: group.Label,
+			Space: group.Label,
+			Local: name,
 		},
 		Xmlns:   "http://www.w3.org/2000/svg",
 		Width:   "100",
@@ -357,7 +358,8 @@ func parseBody(name string, group Group) Body {
 func parseBodypart(body Body, group Group) BodyPart {
 	x, y := FindLowestPadding(group, group.Label)
 	group = Unpad(group, x, y)
-	anchorIndex := slices.IndexFunc(body.Points, func(p Point) bool { return p.Label == group.Label })
+	fmt.Println(group.Label)
+	anchorIndex := slices.IndexFunc(body.Points, func(p Point) bool { return p.Type == BodypartType(group.Label) })
 	anchor := body.Points[anchorIndex]
 	paths := GetPathsInSVG(body.Svg)
 	t, b := findClosestPointInPaths(paths, anchor, 2)
@@ -368,18 +370,18 @@ func parseBodypart(body Body, group Group) BodyPart {
 	CleanGroup(&group)
 	svg := SVG{
 		XMLName: xml.Name{
-			Space: group.ID,
-			Local: group.Label,
+			Space: group.Label,
+			Local: group.ID,
 		},
 		Xmlns:   "http://www.w3.org/2000/svg",
 		Width:   "100",
 		Height:  "100",
-		ViewBox: "0 0 100 100",
+		ViewBox: "-50 -50 100 100",
 		Groups:  []Group{group},
 	}
 	return BodyPart{
-		Svg:   svg,
-		Label: group.Label,
+		Svg:  svg,
+		Type: BodypartType(group.Label),
 	}
 }
 
