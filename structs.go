@@ -53,6 +53,16 @@ func PointTranslate(p Point, t Point) Point {
 	}
 }
 
+var PointsOrder = map[string]int{
+	"eye":   0,
+	"mouth": 1,
+	"arm1":  2,
+	"arm2":  3,
+	"leg1":  4,
+	"leg2":  5,
+	"leg3":  6,
+}
+
 type Body struct {
 	Svg    SVG
 	Points []Point
@@ -94,7 +104,7 @@ func BodyAssemble(body Body) Body {
 			group = GroupApplyTransformation(group, Transformation{Translation: location})
 			svg.Groups = append(svg.Groups, group)
 		}
-		label += body.Parts[index].Svg.XMLName.Local
+		label += string(point.Type) + "=" + body.Parts[index].Svg.XMLName.Local + "+"
 	}
 	svg.XMLName.Space = svg.XMLName.Local
 	svg.XMLName.Local = label

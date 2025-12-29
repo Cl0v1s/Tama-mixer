@@ -78,7 +78,7 @@ func ParseD(d string) []Command {
 
 func Save(basepath string, svg SVG) {
 	_ = os.MkdirAll(basepath, 0755)
-	path := basepath + "/" + svg.XMLName.Space + "_" + svg.XMLName.Local + ".svg"
+	path := basepath + "/" + svg.XMLName.Space + "@" + svg.XMLName.Local + ".svg"
 	out, _ := xml.MarshalIndent(svg, " ", "  ")
 	os.WriteFile(path, out, 0644)
 }
@@ -304,10 +304,10 @@ func Unpad(g Group, x float64, y float64) Group {
 	return group
 }
 
-func RetrieveAnchors(group *Group, rootLabel string) []Point {
+func RetrievePoints(group *Group, rootLabel string) []Point {
 	points := make([]Point, 0)
 	for _, g := range group.Groups {
-		points = append(points, RetrieveAnchors(&g, rootLabel)...)
+		points = append(points, RetrievePoints(&g, rootLabel)...)
 	}
 	i := 0
 	for _, e := range group.Ellipses {
@@ -346,6 +346,9 @@ func RetrieveAnchors(group *Group, rootLabel string) []Point {
 		}
 	}
 	group.Paths = group.Paths[:i]
+	slices.SortFunc(points, func(a Point, b Point) int {
+		return PointsOrder[string(a.Type)] - PointsOrder[string(b.Type)]
+	})
 	return points
 }
 
@@ -361,7 +364,7 @@ func CleanGroup(group *Group) {
 func parseBody(name string, group Group) Body {
 	x, y := FindLowestPadding(group, "body")
 	group = Unpad(group, x, y)
-	anchors := RetrieveAnchors(&group, group.Label)
+	anchors := RetrievePoints(&group, group.Label)
 	svg := SVG{
 		XMLName: xml.Name{
 			Space: group.Label,
