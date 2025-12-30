@@ -38,4 +38,6 @@ func main() {
 		Save("out/generated", body.Svg)
 	}
 
+	ParseFrames("out/generated")
+
 }

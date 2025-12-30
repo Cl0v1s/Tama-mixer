@@ -13,11 +13,11 @@ type BodypartType string
 
 const (
 	BodypartType_Leg1  BodypartType = "leg1"
-	BodypartType_Leg2               = "leg2"
-	BodypartType_Mouth              = "mouth"
-	BodypartType_Eye                = "eye"
-	BodypartType_Arm1               = "arm1"
-	BodypartType_Arm2               = "arm2"
+	BodypartType_Leg2  BodypartType = "leg2"
+	BodypartType_Mouth BodypartType = "mouth"
+	BodypartType_Eye   BodypartType = "eye"
+	BodypartType_Arm1  BodypartType = "arm1"
+	BodypartType_Arm2  BodypartType = "arm2"
 )
 
 type Bezier struct {
@@ -292,4 +292,24 @@ func MarshalD(cmd Command) string {
 	}
 
 	return b.String()
+}
+
+type Expression string
+
+const (
+	Expression_Idle  Expression = "idle"
+	Expression_Happy Expression = "happy"
+	Expression_Angry Expression = "angry"
+)
+
+type Frame struct {
+	Filename   string
+	Form       string
+	Expression Expression
+	BodyFrame  int
+	Leg1Frame  int
+	Leg2Frame  int
+	MouthFrame int
+	Arm1Frame  int
+	Arm2Frame  int
 }
