@@ -294,18 +294,20 @@ func MarshalD(cmd Command) string {
 	return b.String()
 }
 
-type Expression string
+type Expression int
 
 const (
-	Expression_Idle  Expression = "idle"
-	Expression_Happy Expression = "happy"
-	Expression_Angry Expression = "angry"
+	Expression_Idle Expression = iota
+	Expression_Happy
+	Expression_Angry
 )
+
+var AllExpressions = []Expression{Expression_Idle, Expression_Happy, Expression_Angry}
 
 type Frame struct {
 	Filename   string
 	Form       string
-	Expression Expression
+	Expression int
 	BodyFrame  int
 	Leg1Frame  int
 	Leg2Frame  int

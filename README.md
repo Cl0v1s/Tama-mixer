@@ -3,7 +3,7 @@
 
 A bodypart is labelled as follows: 
 
-`type@name-subname-frame`
+`type@name-frame`
 
 **type**: 
 * eye
@@ -17,11 +17,9 @@ A bodypart is labelled as follows:
 **name**:
 The identifier for this particular bodyshape appearance.
 
-**subname**:
-An optional identifier for this particular bodyshape state. For eyes it actually represents the current expression.
-
 **frame**:
 Allows to create animations. Frame 0 is always Idle.
+For eyes, frame represents the expression.
 
 ## Generated 
 

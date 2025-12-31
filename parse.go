@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/xml"
-	"fmt"
 	"math"
 	"os"
 	"slices"
@@ -385,7 +384,6 @@ func parseBody(name string, group Group) Body {
 func parseBodypart(body Body, group Group) BodyPart {
 	x, y := FindLowestPadding(group, group.Label)
 	group = Unpad(group, x, y)
-	fmt.Println(group.Label)
 	anchorIndex := slices.IndexFunc(body.Points, func(p Point) bool { return p.Type == BodypartType(group.Label) })
 	anchor := body.Points[anchorIndex]
 	paths := GetPathsInSVG(body.Svg)

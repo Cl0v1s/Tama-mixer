@@ -23,15 +23,15 @@
      inkscape:pagecheckerboard="0"
      inkscape:deskcolor="#d1d1d1"
      inkscape:document-units="mm"
-     inkscape:zoom="3.1972853"
-     inkscape:cx="25.646757"
-     inkscape:cy="46.132887"
+     inkscape:zoom="2.2608221"
+     inkscape:cx="300.33323"
+     inkscape:cy="172.28246"
      inkscape:window-width="2560"
      inkscape:window-height="1371"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer3" />
+     inkscape:current-layer="layer1" />
   <defs
      id="defs1" />
   <g
@@ -164,7 +164,7 @@
          inkscape:label="path" />
     </g>
     <g
-       id="spag-right-0"
+       id="spagright-0"
        inkscape:label="leg2">
       <path
          style="fill:none;stroke:#003e85;stroke-width:0.79375"
@@ -247,7 +247,7 @@
      id="layer3"
      inkscape:label="common_1">
     <g
-       id="common-happy"
+       id="common-1"
        inkscape:label="eye"
        transform="translate(-31.24693,-1.9895049)">
       <path
@@ -266,7 +266,7 @@
          ry="0.089945354" />
     </g>
     <g
-       id="common-angry"
+       id="common-2"
        inkscape:label="eye"
        transform="matrix(1.4662779,0,0,1.3257487,-27.871751,-4.1755512)"
        style="display:inline">
@@ -286,7 +286,7 @@
          ry="0.089945354" />
     </g>
     <g
-       id="common-idle"
+       id="common-0"
        inkscape:label="eye"
        transform="matrix(1.3517328,0,0,1.5254122,-32.015794,-7.1042667)"
        style="display:inline">

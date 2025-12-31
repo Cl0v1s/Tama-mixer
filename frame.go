@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"io"
 	"os"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 )
@@ -22,41 +23,104 @@ func ParseFrame(filename string) Frame {
 		panic(err)
 	}
 	frame.BodyFrame = int(bodyFrame)
-
 	stepsRegexg := regexp.MustCompile(`.+\@(.+)\.svg`)
 	matches = stepsRegexg.FindStringSubmatch(filename)
 	if len(matches) < 2 {
 		panic("Bad filename " + filename)
 	}
 	steps := strings.Split(matches[1], "+")
-	completeRegx := regexp.MustCompile("(.+)=.+([0-9]+)")
-	partialRegx := regexp.MustCompile("(.+)=.+")
+	stepRegex := regexp.MustCompile("(.+)=(.+)-([0-9]+)")
 	stepsMap := make(map[string]int)
 	for _, step := range steps {
 		if step == "" {
 			continue
 		}
-		matches = completeRegx.FindStringSubmatch(step)
-		if len(matches) < 3 {
-			matches = partialRegx.FindStringSubmatch(step)
-			if len(matches) < 2 {
-				panic("Bad step" + step)
-			}
-			stepsMap[matches[1]] = 0
-		} else {
-			f, err := strconv.ParseInt(matches[2], 10, 32)
-			if err != nil {
-				panic(err)
-			}
-			stepsMap[matches[1]] = int(f)
+		matches = stepRegex.FindStringSubmatch(step)
+		if len(matches) < 4 {
+			panic("Bad step" + step)
 		}
+		f, err := strconv.ParseInt(matches[3], 10, 32)
+		if err != nil {
+			panic(err)
+		}
+		stepsMap[matches[1]] = int(f)
 	}
-	fmt.Println(stepsMap)
-
+	value, ok := stepsMap[string(BodypartType_Eye)]
+	if ok {
+		frame.Expression = value
+	}
+	value, ok = stepsMap[string(BodypartType_Arm1)]
+	if ok {
+		frame.Arm1Frame = value
+	}
+	value, ok = stepsMap[string(BodypartType_Arm2)]
+	if ok {
+		frame.Arm2Frame = value
+	}
+	value, ok = stepsMap[string(BodypartType_Leg1)]
+	if ok {
+		frame.Leg1Frame = value
+	}
+	value, ok = stepsMap[string(BodypartType_Leg2)]
+	if ok {
+		frame.Leg2Frame = value
+	}
+	value, ok = stepsMap[string(BodypartType_Mouth)]
+	if ok {
+		frame.MouthFrame = value
+	}
 	return frame
 }
 
-func ParseFrames(path string) []Frame {
+func groupFramesByForm(frames []Frame) [][]Frame {
+	if len(frames) == 0 {
+		return [][]Frame{}
+	}
+	slices.SortFunc(frames, func(a Frame, b Frame) int {
+		return strings.Compare(a.Form, b.Form)
+	})
+	results := make([][]Frame, 0)
+	current := make([]Frame, 0)
+	currentForm := frames[0].Form
+	for _, frame := range frames {
+		if frame.Form != currentForm {
+			currentForm = frame.Form
+			results = append(results, current)
+			current = make([]Frame, 0)
+		}
+		current = append(current, frame)
+	}
+	if len(current) > 0 {
+		results = append(results, current)
+	}
+	return results
+}
+
+func groupFramesByExpression(frames []Frame) [][]Frame {
+	if len(frames) == 0 {
+		return [][]Frame{}
+	}
+	slices.SortFunc(frames, func(a Frame, b Frame) int {
+		return a.Expression - b.Expression
+	})
+	results := make([][]Frame, 0)
+	current := make([]Frame, 0)
+	currentExpression := frames[0].Expression
+	for _, frame := range frames {
+		if frame.Expression != currentExpression {
+			currentExpression = frame.Expression
+			results = append(results, current)
+			current = make([]Frame, 0)
+		}
+		current = append(current, frame)
+	}
+	if len(current) > 0 {
+		results = append(results, current)
+	}
+	return results
+}
+
+func ParseFrames(path string) [][][]Frame {
 	entries, err := os.ReadDir(path)
 	if err != nil {
 		panic(err)
@@ -66,5 +130,36 @@ func ParseFrames(path string) []Frame {
 	for _, e := range entries {
 		frames = append(frames, ParseFrame(e.Name()))
 	}
-	return frames
+
+	framesByForm := groupFramesByForm(frames)
+	framesByFormAndExpression := make([][][]Frame, 0)
+	for i := 0; i < len(framesByForm); i++ {
+		framesByExpression := groupFramesByExpression(framesByForm[i])
+		framesByFormAndExpression = append(framesByFormAndExpression, framesByExpression)
+	}
+
+	return framesByFormAndExpression
+}
+
+func SaveFrames(sourceFolder string, outFolder string, frames []Frame) {
+	for index, frame := range frames {
+		src := sourceFolder + "/" + frame.Filename
+		dstdir := outFolder + "/" + frame.Form + "/" + strconv.FormatInt(int64(frame.Expression), 10)
+		dst := dstdir + "/" + strconv.FormatInt(int64(index), 10) + ".svg"
+		os.MkdirAll(dstdir, 0750)
+		fin, err := os.Open(src)
+		if err != nil {
+			panic(err)
+		}
+		defer fin.Close()
+		fout, err := os.Create(dst)
+		if err != nil {
+			panic(err)
+		}
+		defer fout.Close()
+		_, err = io.Copy(fout, fin)
+		if err != nil {
+			panic(err)
+		}
+	}
 }

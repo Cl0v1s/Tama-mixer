@@ -38,6 +38,12 @@ func main() {
 		Save("out/generated", body.Svg)
 	}
 
-	ParseFrames("out/generated")
+	grouppedFrames := ParseFrames("out/generated")
+
+	for _, formGroup := range grouppedFrames {
+		for _, expressionGroup := range formGroup {
+			SaveFrames("out/generated", "out/sorted", expressionGroup)
+		}
+	}
 
 }
