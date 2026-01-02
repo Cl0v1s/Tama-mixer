@@ -9,6 +9,106 @@ import (
 	"strings"
 )
 
+// We order by body frame
+func orderFramesIdle(frames []Frame) []Frame {
+	slices.SortFunc(frames, func(a Frame, b Frame) int {
+		if a.BodyFrame != b.BodyFrame {
+			return a.BodyFrame - b.BodyFrame
+		}
+		if a.MouthFrame != b.MouthFrame {
+			return a.MouthFrame - b.MouthFrame
+		}
+		if a.Arm1Frame != b.Arm1Frame {
+			return a.Arm1Frame - b.Arm1Frame
+		}
+		if a.Arm2Frame != b.Arm2Frame {
+			return a.Arm2Frame - b.Arm2Frame
+		}
+		if a.Leg1Frame != b.Leg1Frame {
+			return a.Leg1Frame - b.Leg1Frame
+		}
+		if a.Leg2Frame != b.Leg2Frame {
+			return a.Leg2Frame - b.Leg2Frame
+		}
+		return 0
+	})
+	// we delete frames with open mouth and moving legs or arms
+	frames = slices.DeleteFunc(frames, func(frame Frame) bool {
+		if frame.MouthFrame != 0 && (frame.Leg1Frame != 0 || frame.Leg2Frame != 0 || frame.Arm1Frame != 0 || frame.Arm2Frame != 0) {
+			return true
+		}
+		return false
+	})
+	return frames
+}
+
+func orderFramesHappy(frames []Frame) []Frame {
+	slices.SortFunc(frames, func(a Frame, b Frame) int {
+		if a.BodyFrame != b.BodyFrame {
+			return a.BodyFrame - b.BodyFrame
+		}
+		if a.MouthFrame != b.MouthFrame {
+			return a.MouthFrame - b.MouthFrame
+		}
+		if a.Arm1Frame != b.Arm1Frame {
+			return a.Arm1Frame - b.Arm1Frame
+		}
+		if a.Arm2Frame != b.Arm2Frame {
+			return a.Arm2Frame - b.Arm2Frame
+		}
+		return 0
+	})
+	// we delete frames with open mouth and moving legs or arms
+	frames = slices.DeleteFunc(frames, func(frame Frame) bool {
+		if frame.BodyFrame != 0 || frame.Leg1Frame != frame.Leg2Frame {
+			return true
+		}
+		return false
+	})
+	return frames
+}
+
+func orderFramesAngry(frames []Frame) []Frame {
+	slices.SortFunc(frames, func(a Frame, b Frame) int {
+		if a.BodyFrame != b.BodyFrame {
+			return a.BodyFrame - b.BodyFrame
+		}
+		if a.MouthFrame != b.MouthFrame {
+			return a.MouthFrame - b.MouthFrame
+		}
+		if a.Arm1Frame != b.Arm1Frame {
+			return a.Arm1Frame - b.Arm1Frame
+		}
+		if a.Arm2Frame != b.Arm2Frame {
+			return a.Arm2Frame - b.Arm2Frame
+		}
+		if a.Leg1Frame != b.Leg1Frame {
+			return a.Leg1Frame - b.Leg1Frame
+		}
+		if a.Leg2Frame != b.Leg2Frame {
+			return a.Leg2Frame - b.Leg2Frame
+		}
+		return 0
+	})
+	return frames
+}
+
+func orderFramesByExpression(frames []Frame) []Frame {
+	if len(frames) == 0 {
+		return frames
+	}
+	expression := frames[0].Expression
+	switch expression {
+	case int(Expression_Idle):
+		return orderFramesIdle(frames)
+	case int(Expression_Happy):
+		return orderFramesHappy(frames)
+	case int(Expression_Angry):
+		return orderFramesAngry(frames)
+	}
+	return frames
+}
+
 func ParseFrame(filename string) Frame {
 	frame := Frame{}
 	frame.Filename = filename
@@ -135,6 +235,9 @@ func ParseFrames(path string) [][][]Frame {
 	framesByFormAndExpression := make([][][]Frame, 0)
 	for i := 0; i < len(framesByForm); i++ {
 		framesByExpression := groupFramesByExpression(framesByForm[i])
+		for u := 0; u < len(framesByExpression); u++ {
+			framesByExpression[u] = orderFramesByExpression(framesByExpression[u])
+		}
 		framesByFormAndExpression = append(framesByFormAndExpression, framesByExpression)
 	}
 

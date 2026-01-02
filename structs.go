@@ -309,9 +309,9 @@ type Frame struct {
 	Form       string
 	Expression int
 	BodyFrame  int
+	MouthFrame int
 	Leg1Frame  int
 	Leg2Frame  int
-	MouthFrame int
 	Arm1Frame  int
 	Arm2Frame  int
 }
