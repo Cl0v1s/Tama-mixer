@@ -32,6 +32,7 @@ func main() {
 	bodies = Mix(bodies, bodyparts)
 	for i := 0; i < len(bodies); i++ {
 		bodies[i] = BodyAssemble(bodies[i])
+		bodies[i] = BodyReframe(bodies[i], 32)
 	}
 
 	for _, body := range bodies {

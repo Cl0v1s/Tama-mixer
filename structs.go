@@ -99,7 +99,7 @@ func BodyAssemble(body Body) Body {
 			angle = GetRotationFromBezier(bezier, t)
 			location = GetPointFromBezier(bezier, t)
 		}
-		for _, group := range body.Parts[index].Svg.Groups {
+		for _, group := range body.Parts[index].Svg.Groups { // may cause issues if nested groups
 			group = GroupApplyTransformation(group, Transformation{Rotation: angle})
 			group = GroupApplyTransformation(group, Transformation{Translation: location})
 			svg.Groups = append(svg.Groups, group)
@@ -112,6 +112,58 @@ func BodyAssemble(body Body) Body {
 	// we prevent further assemble
 	body.Points = make([]Point, 0)
 	body.Parts = make([]BodyPart, 0)
+	return body
+}
+
+func BodyReframe(body Body, targetSide int) Body {
+	top := 9999.0
+	bottom := 0.0
+	left := 9999.0
+	right := 0.0
+	paths := GetPathsInSVG(body.Svg)
+	for _, path := range paths {
+		commands := ParseD(path.D)
+		beziers := GetBeziersFromCommands(commands)
+		for _, bezier := range beziers {
+			for i := 0.0; i <= 1.0; i += 0.01 {
+				point := GetPointFromBezier(bezier, i)
+				if point.X < left {
+					left = point.X
+				}
+				if point.X > right {
+					right = point.X
+				}
+				if point.Y < top {
+					top = point.Y
+				}
+				if point.Y > bottom {
+					bottom = point.Y
+				}
+			}
+		}
+	}
+	w := right - left
+	h := bottom - top
+	side := math.Max(w, h)
+	factor := side / float64(targetSide)
+	if factor > 1 {
+		side = math.Ceil(factor) * float64(targetSide)
+	}
+
+	padLeft := side/2 - w/2
+	padTop := side - h
+
+	groups := make([]Group, 0)
+	for _, group := range body.Svg.Groups { // may cause issues if nested groups
+		group = GroupApplyTransformation(group, Transformation{Translation: Point{X: padLeft, Y: padTop}})
+		groups = append(groups, group)
+	}
+	body.Svg.Groups = groups
+
+	body.Svg = SVGCopy(body.Svg)
+	body.Svg.Width = strconv.FormatFloat(side, 'f', -1, 64)
+	body.Svg.Height = strconv.FormatFloat(side, 'f', -1, 64)
+	body.Svg.ViewBox = strconv.FormatFloat(math.Round(left), 'f', -1, 64) + ", " + strconv.FormatFloat(math.Round(top), 'f', -1, 64) + ",  " + strconv.FormatFloat(side, 'f', -1, 64) + " , " + strconv.FormatFloat(side, 'f', -1, 64)
 	return body
 }
 
