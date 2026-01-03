@@ -196,111 +196,25 @@ func GetBeziersFromCommands(commands []Command) []Bezier {
 	return results
 }
 
-// Search for elements named as the group and calculate their lower coordinates
-func FindLowestPadding(g Group, anchorLabel string) (float64, float64) {
+func findLowestPadding(g Group) (float64, float64) {
 	x, y := math.MaxFloat64, math.MaxFloat64
-	for _, g := range g.Groups {
-		x1, y1 := FindLowestPadding(g, anchorLabel)
-		if x1 < x {
-			x = x1
-		}
-		if y1 < y {
-			y = y1
-		}
-	}
-
-	for _, p := range g.Paths {
-		if anchorLabel != "" && p.Label != anchorLabel {
-			continue
-		}
-		cmds := ParseD(p.D)
-		beziers := GetBeziersFromCommands(cmds)
-		for _, bezier := range beziers {
-			points := []Point{bezier.P0, bezier.P1, bezier.P2, bezier.P3}
-			for _, point := range points {
-				x1, y1 := point.X, point.Y
-				if x1 < x {
-					x = x1
+	paths := GetPathsInGroup(g)
+	for _, path := range paths {
+		commands := ParseD(path.D)
+		beziers := GetBeziersFromCommands(commands)
+		for _, b := range beziers {
+			for i := 0.0; i <= 1; i += 0.1 {
+				p := GetPointFromBezier(b, i)
+				if x > p.X {
+					x = p.X
 				}
-				if y1 < y {
-					y = y1
+				if y > p.Y {
+					y = p.Y
 				}
 			}
 		}
 	}
-
-	for _, e := range g.Ellipses {
-		if anchorLabel != "" && e.Label != anchorLabel {
-			continue
-		}
-		x1, y1 := e.CX, e.CY
-		if x1 < x {
-			x = x1
-		}
-		if y1 < y {
-			y = y1
-		}
-	}
-
-	for _, e := range g.Circles {
-		if anchorLabel != "" && e.Label != anchorLabel {
-			continue
-		}
-		x1, y1 := e.CX, e.CY
-		if x1 < x {
-			x = x1
-		}
-		if y1 < y {
-			y = y1
-		}
-	}
-
 	return x, y
-}
-
-func Unpad(g Group, x float64, y float64) Group {
-	ellipsis := make([]Ellipse, 0)
-	for _, el := range g.Ellipses {
-		el.CX -= x
-		el.CY -= y
-		ellipsis = append(ellipsis, el)
-	}
-	circles := make([]Circle, 0)
-	for _, ci := range g.Circles {
-		ci.CX -= x
-		ci.CY -= y
-		circles = append(circles, ci)
-	}
-	paths := make([]Path, 0)
-	for _, p := range g.Paths {
-		cmds := ParseD(p.D)
-		d := ""
-		for i := 0; i < len(cmds); i++ {
-			if strings.ToLower(cmds[i].Type) == "m" {
-				for u := 0; u < len(cmds[i].Args); u += 2 {
-					cmds[i].Args[u] -= x
-					cmds[i].Args[u+1] -= y
-				}
-			}
-			d = d + " " + MarshalD(cmds[i])
-		}
-		p.D = d
-		paths = append(paths, p)
-	}
-	groups := make([]Group, 0)
-	for _, g := range g.Groups {
-		g := Unpad(g, x, y)
-		groups = append(groups, g)
-	}
-	group := Group{
-		ID:       g.ID,
-		Label:    g.Label,
-		Paths:    paths,
-		Groups:   groups,
-		Ellipses: ellipsis,
-		Circles:  circles,
-	}
-	return group
 }
 
 func RetrievePoints(group *Group, rootLabel string) []Point {
@@ -360,19 +274,19 @@ func CleanGroup(group *Group) {
 	group.Paths = slices.DeleteFunc(group.Paths, func(c Path) bool { return c.Label == group.Label })
 }
 
-func parseBody(name string, group Group) Body {
-	x, y := FindLowestPadding(group, "body")
-	group = Unpad(group, x, y)
+func parseBody(group Group) Body {
+	x, y := findLowestPadding(group)
+	group = GroupApplyTransformation(group, Transformation{Translation: Point{X: -x, Y: -y}})
 	anchors := RetrievePoints(&group, group.Label)
 	svg := SVG{
 		XMLName: xml.Name{
 			Space: group.Label,
-			Local: name,
+			Local: group.ID,
 		},
 		Xmlns:   "http://www.w3.org/2000/svg",
-		Width:   "75",
-		Height:  "75",
-		ViewBox: "-25 -25 75 75",
+		Width:   "100",
+		Height:  "100",
+		ViewBox: "0 0 100 100",
 		Groups:  []Group{group},
 	}
 	return Body{
@@ -381,17 +295,30 @@ func parseBody(name string, group Group) Body {
 	}
 }
 
-func parseBodypart(body Body, group Group) BodyPart {
-	x, y := FindLowestPadding(group, group.Label)
-	group = Unpad(group, x, y)
-	anchorIndex := slices.IndexFunc(body.Points, func(p Point) bool { return p.Type == BodypartType(group.Label) })
-	anchor := body.Points[anchorIndex]
-	paths := GetPathsInSVG(body.Svg)
-	t, b := findClosestPointInPaths(paths, anchor, 2)
-	if t >= 0 {
-		angle := GetRotationFromBezier(b, t) * -1
-		group = GroupApplyTransformation(group, Transformation{Rotation: angle})
+// do not considere paths
+func findElementPosition(group Group, name string) Point {
+	for _, el := range group.Ellipses {
+		if el.Label == name {
+			return Point{X: el.CX, Y: el.CY}
+		}
 	}
+	for _, ci := range group.Circles {
+		if ci.Label == name {
+			return Point{X: ci.CX, Y: ci.CY}
+		}
+	}
+	for _, g := range group.Groups {
+		p := findElementPosition(g, name)
+		if p.X != math.MaxFloat64 && p.Y != math.MaxFloat64 {
+			return p
+		}
+	}
+	return Point{X: math.MaxFloat64, Y: math.MaxFloat64}
+}
+
+func parseBodypart(group Group) BodyPart {
+	anchor := findElementPosition(group, group.Label)
+	group = GroupApplyTransformation(group, Transformation{Translation: Point{X: anchor.X * -1, Y: anchor.Y * -1}})
 	CleanGroup(&group)
 	svg := SVG{
 		XMLName: xml.Name{
@@ -413,17 +340,12 @@ func parseBodypart(body Body, group Group) BodyPart {
 func Sort(root SVG) ([]Body, []BodyPart) {
 	bodies := make([]Body, 0)
 	bodyparts := make([]BodyPart, 0)
-
-	for _, character := range root.Groups {
-		bodyIndex := slices.IndexFunc(character.Groups, func(g Group) bool { return g.Label == "body" })
-		body := parseBody(character.Label, character.Groups[bodyIndex])
-		for _, group := range character.Groups {
-			if group.Label != "body" {
-				bodyparts = append(bodyparts, parseBodypart(body, group))
-			}
+	for _, group := range root.Groups {
+		if group.Label == "body" {
+			bodies = append(bodies, parseBody(group))
+		} else {
+			bodyparts = append(bodyparts, parseBodypart(group))
 		}
-		bodies = append(bodies, body)
 	}
-
 	return bodies, bodyparts
 }

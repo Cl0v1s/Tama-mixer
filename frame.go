@@ -112,10 +112,10 @@ func orderFramesByExpression(frames []Frame) []Frame {
 func ParseFrame(filename string) Frame {
 	frame := Frame{}
 	frame.Filename = filename
-	formRexg := regexp.MustCompile("([A-Za-z]+)_([0-9]+).+.svg")
+	formRexg := regexp.MustCompile("([A-Za-z]+)-([0-9]+).+.svg")
 	matches := formRexg.FindStringSubmatch(filename)
 	if len(matches) < 3 {
-		panic("Bad filename " + filename)
+		panic("Bad filename 1 " + filename)
 	}
 	frame.Form = matches[1]
 	bodyFrame, err := strconv.ParseInt(matches[2], 10, 32)
@@ -126,7 +126,7 @@ func ParseFrame(filename string) Frame {
 	stepsRegexg := regexp.MustCompile(`.+\@(.+)\.svg`)
 	matches = stepsRegexg.FindStringSubmatch(filename)
 	if len(matches) < 2 {
-		panic("Bad filename " + filename)
+		panic("Bad filename 2 " + filename)
 	}
 	steps := strings.Split(matches[1], "+")
 	stepRegex := regexp.MustCompile("(.+)=(.+)-([0-9]+)")

@@ -259,8 +259,41 @@ func GroupCopy(group Group) Group {
 }
 
 func GroupApplyTransformation(group Group, t Transformation) Group {
+	result := GroupCopy(group)
+
+	ellipsis := make([]Ellipse, 0)
+	for _, el := range group.Ellipses {
+		p := Point{X: el.CX, Y: el.CY}
+		p = PointTranslate(p, t.Translation)
+		p = PointRotate(p, t.Rotation)
+		el.CX = p.X
+		el.CY = p.Y
+		ellipsis = append(ellipsis, el)
+	}
+	result.Ellipses = ellipsis
+
+	circles := make([]Circle, 0)
+	for _, ci := range group.Circles {
+		p := Point{X: ci.CX, Y: ci.CY}
+		p = PointTranslate(p, t.Translation)
+		p = PointRotate(p, t.Rotation)
+		ci.CX = p.X
+		ci.CY = p.Y
+		circles = append(circles, ci)
+	}
+	result.Circles = circles
+
 	paths := GetPathsInGroup(group)
-	results := make([]Path, 0)
+
+	groups := make([]Group, 0)
+	for _, g := range groups {
+		// we remove path as they are alreay retrieve by GetPathsInGroup
+		g.Paths = []Path{}
+		groups = append(groups, GroupApplyTransformation(g, t))
+	}
+	result.Groups = groups
+
+	finalPaths := make([]Path, 0)
 	for i := 0; i < len(paths); i++ {
 		commands := ParseD(paths[i].D)
 		beziers := GetBeziersFromCommands(commands)
@@ -282,10 +315,11 @@ func GroupApplyTransformation(group Group, t Transformation) Group {
 			Transform: paths[i].Transform,
 			D:         bezierToD(beziers),
 		}
-		results = append(results, p)
+		finalPaths = append(finalPaths, p)
 	}
-	group.Paths = results
-	return group
+	result.Paths = finalPaths
+
+	return result
 }
 
 type Ellipse struct {
