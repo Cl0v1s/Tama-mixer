@@ -228,7 +228,7 @@ func RetrievePoints(group *Group, rootLabel string) []Point {
 			group.Ellipses[i] = e
 			i++
 		} else {
-			points = append(points, Point{X: e.CX, Y: e.CY, Type: BodypartType(e.Label), Transform: e.Transform})
+			points = append(points, Point{X: e.CX, Y: e.CY, Type: BodypartType(e.Label)})
 		}
 	}
 	group.Ellipses = group.Ellipses[:i]
@@ -238,7 +238,7 @@ func RetrievePoints(group *Group, rootLabel string) []Point {
 			group.Circles[i] = e
 			i++
 		} else {
-			points = append(points, Point{X: e.CX, Y: e.CY, Type: BodypartType(e.Label), Transform: e.Transform})
+			points = append(points, Point{X: e.CX, Y: e.CY, Type: BodypartType(e.Label)})
 		}
 	}
 	group.Circles = group.Circles[:i]
@@ -255,7 +255,7 @@ func RetrievePoints(group *Group, rootLabel string) []Point {
 			if index == -1 {
 				continue
 			}
-			points = append(points, Point{X: commands[index].Args[0], Y: commands[index].Args[1], Type: BodypartType(p.Label), Transform: p.Transform})
+			points = append(points, Point{X: commands[index].Args[0], Y: commands[index].Args[1], Type: BodypartType(p.Label)})
 		}
 	}
 	group.Paths = group.Paths[:i]

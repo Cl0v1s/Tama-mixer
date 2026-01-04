@@ -231,8 +231,6 @@ type Group struct {
 	ID    string `xml:"id,attr"`
 	Label string `xml:"label,attr"`
 
-	Transform string `xml:"transform,attr"`
-
 	Groups   []Group   `xml:"g"`
 	Paths    []Path    `xml:"path"`
 	Ellipses []Ellipse `xml:"ellipse"`
@@ -309,11 +307,10 @@ func GroupApplyTransformation(group Group, t Transformation) Group {
 			beziers[u].P3 = PointRotate(beziers[u].P3, t.Rotation)
 		}
 		p := Path{
-			ID:        paths[i].ID,
-			Label:     paths[i].Label,
-			Style:     paths[i].Style,
-			Transform: paths[i].Transform,
-			D:         bezierToD(beziers),
+			ID:    paths[i].ID,
+			Label: paths[i].Label,
+			Style: paths[i].Style,
+			D:     bezierToD(beziers),
 		}
 		finalPaths = append(finalPaths, p)
 	}
@@ -323,22 +320,20 @@ func GroupApplyTransformation(group Group, t Transformation) Group {
 }
 
 type Ellipse struct {
-	ID        string  `xml:"id,attr"`
-	Label     string  `xml:"label,attr"`
-	CX        float64 `xml:"cx,attr"`
-	CY        float64 `xml:"cy,attr"`
-	RX        float64 `xml:"rx,attr"`
-	RY        float64 `xml:"ry,attr"`
-	Transform string  `xml:"transform,attr"`
+	ID    string  `xml:"id,attr"`
+	Label string  `xml:"label,attr"`
+	CX    float64 `xml:"cx,attr"`
+	CY    float64 `xml:"cy,attr"`
+	RX    float64 `xml:"rx,attr"`
+	RY    float64 `xml:"ry,attr"`
 }
 
 type Circle struct {
-	ID        string  `xml:"id,attr"`
-	Label     string  `xml:"label,attr"`
-	CX        float64 `xml:"cx,attr"`
-	CY        float64 `xml:"cy,attr"`
-	R         float64 `xml:"r,attr"`
-	Transform string  `xml:"transform,attr"`
+	ID    string  `xml:"id,attr"`
+	Label string  `xml:"label,attr"`
+	CX    float64 `xml:"cx,attr"`
+	CY    float64 `xml:"cy,attr"`
+	R     float64 `xml:"r,attr"`
 }
 
 type Command struct {
@@ -347,11 +342,10 @@ type Command struct {
 }
 
 type Path struct {
-	ID        string `xml:"id,attr"`
-	Label     string `xml:"label,attr"`
-	D         string `xml:"d,attr"`
-	Style     string `xml:"style,attr"`
-	Transform string `xml:"transform,attr"`
+	ID    string `xml:"id,attr"`
+	Label string `xml:"label,attr"`
+	D     string `xml:"d,attr"`
+	Style string `xml:"style,attr"`
 }
 
 func PrintCommands(cmds []Command) {
