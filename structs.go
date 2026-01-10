@@ -184,17 +184,16 @@ func BodyGetBodypart(body Body, tpe BodypartType) (error, BodyPart) {
 }
 
 func BodyGetMissingPart(body Body) (error, Point) {
-	index := slices.IndexFunc(body.Points, func(p Point) bool {
-		err, _ := BodyGetBodypart(body, p.Type)
-		if err != nil {
-			return true
-		}
-		return false
-	})
-	if index == -1 {
+	missingPoints := make([]Point, len(body.Points))
+	copy(missingPoints, body.Points)
+	for _, part := range body.Parts {
+		index := slices.IndexFunc(missingPoints, func(p Point) bool { return p.Type == part.Type })
+		missingPoints = append(missingPoints[:index], missingPoints[index+1:]...)
+	}
+	if len(missingPoints) == 0 {
 		return fmt.Errorf("Body is complete."), Point{}
 	}
-	return nil, body.Points[index]
+	return nil, missingPoints[0]
 }
 
 type BodyPart struct {

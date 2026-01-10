@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"slices"
 	"strconv"
 )
@@ -36,6 +37,7 @@ func Mix(bodies []Body, bodyparts []BodyPart) []Body {
 	}
 
 	for len(bucket) > 0 {
+		fmt.Printf("%d / %d\n", len(bucket), len(ready))
 		body := bucket[0]
 		err, point := BodyGetMissingPart(body)
 		if err != nil {
@@ -45,6 +47,40 @@ func Mix(bodies []Body, bodyparts []BodyPart) []Body {
 			copy(pretendants, bodyparts)
 			pretendants = slices.DeleteFunc(pretendants, func(p BodyPart) bool { return p.Type != point.Type })
 			for _, pr := range pretendants {
+				// ensuring consistent bodies
+				// same eyes
+				if pr.Type == BodypartType_Eye {
+					err, other := BodyGetBodypart(body, BodypartType_Eye)
+					if err == nil && other.Svg.XMLName.Local != pr.Svg.XMLName.Local {
+						continue
+					}
+				}
+				// same arms
+				if pr.Type == BodypartType_Arm1 {
+					err, other := BodyGetBodypart(body, BodypartType_Arm2)
+					if err == nil && other.Svg.XMLName.Local != pr.Svg.XMLName.Local {
+						continue
+					}
+				}
+				if pr.Type == BodypartType_Arm2 {
+					err, other := BodyGetBodypart(body, BodypartType_Arm1)
+					if err == nil && other.Svg.XMLName.Local != pr.Svg.XMLName.Local {
+						continue
+					}
+				}
+				// same legs
+				if pr.Type == BodypartType_Leg1 {
+					err, other := BodyGetBodypart(body, BodypartType_Leg2)
+					if err == nil && other.Svg.XMLName.Local != pr.Svg.XMLName.Local {
+						continue
+					}
+				}
+				if pr.Type == BodypartType_Leg2 {
+					err, other := BodyGetBodypart(body, BodypartType_Leg1)
+					if err == nil && other.Svg.XMLName.Local != pr.Svg.XMLName.Local {
+						continue
+					}
+				}
 				c := BodyCopy(body)
 				c.Parts = append(c.Parts, pr)
 				bucket = append(bucket, c)

@@ -186,6 +186,72 @@ func GetBeziersFromCommands(commands []Command) []Bezier {
 			results = append(results, b)
 			current = b.P3
 			zPoint = nil
+		} else if command.Type == "V" {
+			b := Bezier{}
+			b.P0 = current
+			b.P1 = current
+			b.P2 = Point{X: current.X, Y: command.Args[0]}
+			b.P3 = b.P2
+			results = append(results, b)
+			current = b.P3
+		} else if command.Type == "v" {
+			b := Bezier{}
+			b.P0 = current
+			b.P1 = current
+			b.P2 = Point{X: current.X, Y: current.Y + command.Args[0]}
+			b.P3 = b.P2
+			results = append(results, b)
+			current = b.P3
+		} else if command.Type == "H" {
+			b := Bezier{}
+			b.P0 = current
+			b.P1 = current
+			b.P2 = Point{X: command.Args[0], Y: current.Y}
+			b.P3 = b.P2
+			results = append(results, b)
+			current = b.P3
+		} else if command.Type == "h" {
+			b := Bezier{}
+			b.P0 = current
+			b.P1 = current
+			b.P2 = Point{X: current.X + command.Args[0], Y: current.Y}
+			b.P3 = b.P2
+			results = append(results, b)
+			current = b.P3
+		} else if command.Type == "A" {
+			for i := 0; i < len(command.Args); i += 7 {
+				b := Bezier{}
+				b.P0 = current
+				b.P3 = Point{X: command.Args[i+5], Y: command.Args[i+6]}
+				// Approximate arc with control points
+				b.P1 = Point{
+					X: current.X + (b.P3.X-current.X)/3,
+					Y: current.Y + (b.P3.Y-current.Y)/3,
+				}
+				b.P2 = Point{
+					X: current.X + 2*(b.P3.X-current.X)/3,
+					Y: current.Y + 2*(b.P3.Y-current.Y)/3,
+				}
+				current = b.P3
+				results = append(results, b)
+			}
+		} else if command.Type == "a" {
+			for i := 0; i < len(command.Args); i += 7 {
+				b := Bezier{}
+				b.P0 = current
+				b.P3 = Point{X: current.X + command.Args[i+5], Y: current.Y + command.Args[i+6]}
+				// Approximate arc with control points
+				b.P1 = Point{
+					X: current.X + (b.P3.X-current.X)/3,
+					Y: current.Y + (b.P3.Y-current.Y)/3,
+				}
+				b.P2 = Point{
+					X: current.X + 2*(b.P3.X-current.X)/3,
+					Y: current.Y + 2*(b.P3.Y-current.Y)/3,
+				}
+				current = b.P3
+				results = append(results, b)
+			}
 		} else {
 			panic("GetBeziersFromCommands: Unsupported command " + command.Type)
 		}
@@ -274,7 +340,10 @@ func CleanGroup(group *Group) {
 	group.Paths = slices.DeleteFunc(group.Paths, func(c Path) bool { return c.Label == group.Label })
 }
 
-func parseBody(group Group) Body {
+func parseBody(g Group) Body {
+	group := GroupCopy(g)
+	group.ID = group.Label
+	group.Label = "body"
 	x, y := findLowestPadding(group)
 	group = GroupApplyTransformation(group, Transformation{Translation: Point{X: -x, Y: -y}})
 	anchors := RetrievePoints(&group, group.Label)
@@ -316,7 +385,10 @@ func findElementPosition(group Group, name string) Point {
 	return Point{X: math.MaxFloat64, Y: math.MaxFloat64}
 }
 
-func parseBodypart(group Group) BodyPart {
+func parseBodypart(g Group) BodyPart {
+	group := GroupCopy(g)
+	group.ID = group.Label
+	group.Label = group.Ellipses[0].Label
 	anchor := findElementPosition(group, group.Label)
 	group = GroupApplyTransformation(group, Transformation{Translation: Point{X: anchor.X * -1, Y: anchor.Y * -1}})
 	CleanGroup(&group)
@@ -341,7 +413,7 @@ func Sort(root SVG) ([]Body, []BodyPart) {
 	bodies := make([]Body, 0)
 	bodyparts := make([]BodyPart, 0)
 	for _, group := range root.Groups {
-		if group.Label == "body" {
+		if group.Paths[0].Label == "body" {
 			bodies = append(bodies, parseBody(group))
 		} else {
 			bodyparts = append(bodyparts, parseBodypart(group))

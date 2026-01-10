@@ -2,11 +2,12 @@ package main
 
 import (
 	"encoding/xml"
+	"fmt"
 	"os"
 )
 
 func main() {
-	file, err := os.Open("tama.svg")
+	file, err := os.Open("svg/parts.svg")
 	if err != nil {
 		panic(err)
 	}
@@ -29,11 +30,16 @@ func main() {
 		Save("out/bodies", body.Svg)
 	}
 
+	fmt.Println("Mixing")
 	bodies = Mix(bodies, bodyparts)
+	fmt.Println("Mixing done")
+	fmt.Println("Assembling")
 	for i := 0; i < len(bodies); i++ {
+		// fmt.Printf("%d / %d\n", i, len(bodies))
 		bodies[i] = BodyAssemble(bodies[i])
 		bodies[i] = BodyReframe(bodies[i], 32)
 	}
+	fmt.Println("Assembling done")
 
 	for _, body := range bodies {
 		Save("out/generated", body.Svg)
