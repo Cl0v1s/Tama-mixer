@@ -110,153 +110,165 @@ func GetRotationFromBezier(bezier Bezier, t float64) float64 {
 	return math.Atan2(dy, dx) * 180 / math.Pi
 }
 
+func ArcToBeziers(current Point, rx, ry, xAxisRotation float64, largeArcFlag, sweepFlag int, x, y float64) []Bezier {
+	// Convertir rotation en radians
+	phi := xAxisRotation * math.Pi / 180.0
+
+	// Point final
+	P1 := Point{X: x, Y: y}
+
+	// Déplacement si start == end
+	if current.X == P1.X && current.Y == P1.Y {
+		return nil
+	}
+
+	// Correction des rayons si nécessaire
+	rx = math.Abs(rx)
+	ry = math.Abs(ry)
+	if rx == 0 || ry == 0 {
+		return []Bezier{{P0: current, P1: current, P2: P1, P3: P1}}
+	}
+
+	// Convertir coordonnées dans le repère de l'ellipse
+	dx2 := (current.X - P1.X) / 2.0
+	dy2 := (current.Y - P1.Y) / 2.0
+	x1p := math.Cos(phi)*dx2 + math.Sin(phi)*dy2
+	y1p := -math.Sin(phi)*dx2 + math.Cos(phi)*dy2
+
+	// Calcul du centre cx', cy'
+	rx2 := rx * rx
+	ry2 := ry * ry
+	x1p2 := x1p * x1p
+	y1p2 := y1p * y1p
+
+	var sign float64 = 1
+	if largeArcFlag == sweepFlag {
+		sign = -1
+	}
+
+	sq := ((rx2*ry2 - rx2*y1p2 - ry2*x1p2) / (rx2*y1p2 + ry2*x1p2))
+	if sq < 0 {
+		sq = 0
+	}
+	coef := sign * math.Sqrt(sq)
+	cxp := coef * (rx * y1p / ry)
+	cyp := coef * -(ry * x1p / rx)
+
+	// Centre dans le repère original
+	cx := math.Cos(phi)*cxp - math.Sin(phi)*cyp + (current.X+P1.X)/2
+	cy := math.Sin(phi)*cxp + math.Cos(phi)*cyp + (current.Y+P1.Y)/2
+
+	// Angles de début et de fin
+	theta1 := math.Atan2((y1p-cyp)/ry, (x1p-cxp)/rx)
+	deltaTheta := math.Atan2((-y1p-cyp)/ry, (-x1p-cxp)/rx) - theta1
+
+	if sweepFlag == 0 && deltaTheta > 0 {
+		deltaTheta -= 2 * math.Pi
+	} else if sweepFlag == 1 && deltaTheta < 0 {
+		deltaTheta += 2 * math.Pi
+	}
+
+	// Diviser en segments ≤ 90°
+	segments := int(math.Ceil(math.Abs(deltaTheta) / (math.Pi / 2)))
+	delta := deltaTheta / float64(segments)
+
+	var beziers []Bezier
+	for i := 0; i < segments; i++ {
+		t1 := theta1 + float64(i)*delta
+		t2 := t1 + delta
+
+		// Points de Bézier pour ce segment
+		alpha := math.Sin(delta) * (math.Sqrt(4+3*math.Pow(math.Tan(delta/2), 2)) - 1) / 3
+
+		p0 := Point{
+			X: cx + rx*math.Cos(phi)*math.Cos(t1) - ry*math.Sin(phi)*math.Sin(t1),
+			Y: cy + rx*math.Sin(phi)*math.Cos(t1) + ry*math.Cos(phi)*math.Sin(t1),
+		}
+		p3 := Point{
+			X: cx + rx*math.Cos(phi)*math.Cos(t2) - ry*math.Sin(phi)*math.Sin(t2),
+			Y: cy + rx*math.Sin(phi)*math.Cos(t2) + ry*math.Cos(phi)*math.Sin(t2),
+		}
+		dx := p3.X - p0.X
+		dy := p3.Y - p0.Y
+		p1 := Point{X: p0.X + alpha*dx, Y: p0.Y + alpha*dy}
+		p2 := Point{X: p3.X - alpha*dx, Y: p3.Y - alpha*dy}
+
+		beziers = append(beziers, Bezier{P0: p0, P1: p1, P2: p2, P3: p3})
+	}
+
+	return beziers
+}
+
+// Fonction principale
 func GetBeziersFromCommands(commands []Command) []Bezier {
 	results := make([]Bezier, 0)
 	current := Point{X: 0, Y: 0}
 	var zPoint *Point = nil
+
 	for _, command := range commands {
-		if command.Type == "M" {
+		switch command.Type {
+		case "M":
 			current.X = command.Args[0]
 			current.Y = command.Args[1]
-			rest := command.Args[2:]
-			for i := 0; i < len(rest); i += 2 {
-				b := Bezier{}
-				b.P0 = current
-				b.P1 = current
-				b.P2 = Point{X: rest[i], Y: rest[i+1]}
-				b.P3 = b.P2
-				current = b.P3
-				results = append(results, b)
+			if zPoint == nil {
+				zPoint = &Point{X: current.X, Y: current.Y}
 			}
-		} else if command.Type == "m" {
+		case "m":
 			current.X += command.Args[0]
 			current.Y += command.Args[1]
-			rest := command.Args[2:]
-			for i := 0; i < len(rest); i += 2 {
-				b := Bezier{}
-				b.P0 = current
-				b.P1 = current
-				b.P2 = Point{X: current.X + rest[i], Y: current.Y + rest[i+1]}
-				b.P3 = b.P2
-				current = b.P3
-				results = append(results, b)
+			if zPoint == nil {
+				zPoint = &Point{X: current.X, Y: current.Y}
 			}
-		} else if command.Type == "c" {
+		case "L", "l":
+			x, y := command.Args[0], command.Args[1]
+			if command.Type == "l" {
+				x += current.X
+				y += current.Y
+			}
+			results = append(results, Bezier{P0: current, P1: current, P2: Point{X: x, Y: y}, P3: Point{X: x, Y: y}})
+			current = Point{X: x, Y: y}
+		case "C", "c":
 			for i := 0; i < len(command.Args); i += 6 {
-				b := Bezier{}
+				var b Bezier
 				b.P0 = current
-				b.P1 = Point{X: current.X + command.Args[i+0], Y: current.Y + command.Args[i+1]}
-				b.P2 = Point{X: current.X + command.Args[i+2], Y: current.Y + command.Args[i+3]}
-				b.P3 = Point{X: current.X + command.Args[i+4], Y: current.Y + command.Args[i+5]}
+				if command.Type == "c" {
+					b.P1 = Point{X: current.X + command.Args[i], Y: current.Y + command.Args[i+1]}
+					b.P2 = Point{X: current.X + command.Args[i+2], Y: current.Y + command.Args[i+3]}
+					b.P3 = Point{X: current.X + command.Args[i+4], Y: current.Y + command.Args[i+5]}
+				} else {
+					b.P1 = Point{X: command.Args[i], Y: command.Args[i+1]}
+					b.P2 = Point{X: command.Args[i+2], Y: command.Args[i+3]}
+					b.P3 = Point{X: command.Args[i+4], Y: command.Args[i+5]}
+				}
 				current = b.P3
 				results = append(results, b)
 			}
-		} else if command.Type == "C" {
-			for i := 0; i < len(command.Args); i += 6 {
-				b := Bezier{}
-				b.P0 = current
-				b.P1 = Point{X: command.Args[i+0], Y: command.Args[i+1]}
-				b.P2 = Point{X: command.Args[i+2], Y: command.Args[i+3]}
-				b.P3 = Point{X: command.Args[i+4], Y: command.Args[i+5]}
-				current = b.P3
-				results = append(results, b)
+		case "A", "a":
+			for i := 0; i < len(command.Args); i += 7 {
+				rx := command.Args[i]
+				ry := command.Args[i+1]
+				xAxisRotation := command.Args[i+2]
+				largeArcFlag := int(command.Args[i+3])
+				sweepFlag := int(command.Args[i+4])
+				x := command.Args[i+5]
+				y := command.Args[i+6]
+				if command.Type == "a" {
+					x += current.X
+					y += current.Y
+				}
+
+				beziers := ArcToBeziers(current, rx, ry, xAxisRotation, largeArcFlag, sweepFlag, x, y)
+				for _, b := range beziers {
+					results = append(results, b)
+					current = b.P3
+				}
 			}
-		} else if command.Type == "L" {
-			b := Bezier{}
-			b.P0 = current
-			b.P1 = current
-			b.P2 = Point{X: command.Args[0], Y: command.Args[1]}
-			b.P3 = Point{X: command.Args[0], Y: command.Args[1]}
-			results = append(results, b)
-			current = b.P3
-		} else if command.Type == "l" {
-			b := Bezier{}
-			b.P0 = current
-			b.P1 = current
-			b.P2 = Point{X: command.Args[0] + current.X, Y: command.Args[1] + current.Y}
-			b.P3 = Point{X: command.Args[0] + current.X, Y: command.Args[1] + current.Y}
-			results = append(results, b)
-			current = b.P3
-		} else if command.Type == "Z" || command.Type == "z" {
-			b := Bezier{}
-			b.P0 = current
-			b.P1 = current
-			b.P2 = *zPoint
-			b.P3 = *zPoint
-			results = append(results, b)
-			current = b.P3
+		case "Z", "z":
+			if zPoint != nil {
+				results = append(results, Bezier{P0: current, P1: current, P2: *zPoint, P3: *zPoint})
+				current = *zPoint
+			}
 			zPoint = nil
-		} else if command.Type == "V" {
-			b := Bezier{}
-			b.P0 = current
-			b.P1 = current
-			b.P2 = Point{X: current.X, Y: command.Args[0]}
-			b.P3 = b.P2
-			results = append(results, b)
-			current = b.P3
-		} else if command.Type == "v" {
-			b := Bezier{}
-			b.P0 = current
-			b.P1 = current
-			b.P2 = Point{X: current.X, Y: current.Y + command.Args[0]}
-			b.P3 = b.P2
-			results = append(results, b)
-			current = b.P3
-		} else if command.Type == "H" {
-			b := Bezier{}
-			b.P0 = current
-			b.P1 = current
-			b.P2 = Point{X: command.Args[0], Y: current.Y}
-			b.P3 = b.P2
-			results = append(results, b)
-			current = b.P3
-		} else if command.Type == "h" {
-			b := Bezier{}
-			b.P0 = current
-			b.P1 = current
-			b.P2 = Point{X: current.X + command.Args[0], Y: current.Y}
-			b.P3 = b.P2
-			results = append(results, b)
-			current = b.P3
-		} else if command.Type == "A" {
-			for i := 0; i < len(command.Args); i += 7 {
-				b := Bezier{}
-				b.P0 = current
-				b.P3 = Point{X: command.Args[i+5], Y: command.Args[i+6]}
-				// Approximate arc with control points
-				b.P1 = Point{
-					X: current.X + (b.P3.X-current.X)/3,
-					Y: current.Y + (b.P3.Y-current.Y)/3,
-				}
-				b.P2 = Point{
-					X: current.X + 2*(b.P3.X-current.X)/3,
-					Y: current.Y + 2*(b.P3.Y-current.Y)/3,
-				}
-				current = b.P3
-				results = append(results, b)
-			}
-		} else if command.Type == "a" {
-			for i := 0; i < len(command.Args); i += 7 {
-				b := Bezier{}
-				b.P0 = current
-				b.P3 = Point{X: current.X + command.Args[i+5], Y: current.Y + command.Args[i+6]}
-				// Approximate arc with control points
-				b.P1 = Point{
-					X: current.X + (b.P3.X-current.X)/3,
-					Y: current.Y + (b.P3.Y-current.Y)/3,
-				}
-				b.P2 = Point{
-					X: current.X + 2*(b.P3.X-current.X)/3,
-					Y: current.Y + 2*(b.P3.Y-current.Y)/3,
-				}
-				current = b.P3
-				results = append(results, b)
-			}
-		} else {
-			panic("GetBeziersFromCommands: Unsupported command " + command.Type)
-		}
-		if zPoint == nil {
-			zPoint = &Point{X: current.X, Y: current.Y}
 		}
 	}
 	return results

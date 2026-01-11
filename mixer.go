@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"slices"
 	"strconv"
 )
@@ -37,7 +36,7 @@ func Mix(bodies []Body, bodyparts []BodyPart) []Body {
 	}
 
 	for len(bucket) > 0 {
-		fmt.Printf("%d / %d\n", len(bucket), len(ready))
+		// fmt.Printf("%d / %d\n", len(bucket), len(ready))
 		body := bucket[0]
 		err, point := BodyGetMissingPart(body)
 		if err != nil {

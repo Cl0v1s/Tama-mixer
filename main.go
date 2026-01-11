@@ -30,8 +30,11 @@ func main() {
 		Save("out/bodies", body.Svg)
 	}
 
+	bodies = bodies[0:1]
+
 	fmt.Println("Mixing")
 	bodies = Mix(bodies, bodyparts)
+	bodies = bodies[0:100]
 	fmt.Println("Mixing done")
 	fmt.Println("Assembling")
 	for i := 0; i < len(bodies); i++ {
@@ -44,6 +47,7 @@ func main() {
 	for _, body := range bodies {
 		Save("out/generated", body.Svg)
 	}
+	return
 
 	grouppedFrames := ParseFrames("out/generated")
 
