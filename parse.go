@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/xml"
-	"fmt"
 	"math"
 	"os"
 	"slices"
@@ -414,141 +413,49 @@ func PointFindQuadrant(p Point) int {
 }
 func GroupNormalizeRotation(group Group) Group {
 	paths := GetPathsInGroup(group)
+	tail := Point{X: 0, Y: 0}
 
-	// 1. Collecte des points (comme avant, mais plus de points intermédiaires pour meilleure précision)
 	var points []Point
 	for _, path := range paths {
 		commands := ParseD(path.D)
 		beziers := GetBeziersFromCommands(commands)
 		for _, bz := range beziers {
 			points = append(points, bz.P0, bz.P3)
-
-			// Plus de points sur la courbe → meilleure représentation
-			for t := 0.1; t < 1.0; t += 0.1 {
-				// Interpolation cubique simple (tu peux améliorer avec vraie Bézier si besoin)
-				x := math.Pow(1-t, 3)*bz.P0.X + 3*math.Pow(1-t, 2)*t*bz.P1.X + 3*(1-t)*t*t*bz.P2.X + t*t*t*bz.P3.X
-				y := math.Pow(1-t, 3)*bz.P0.Y + 3*math.Pow(1-t, 2)*t*bz.P1.Y + 3*(1-t)*t*t*bz.P2.Y + t*t*t*bz.P3.Y
-				points = append(points, Point{X: x, Y: y})
+			for t := 0.05; t < 1.0; t += 0.05 {
+				points = append(points, GetPointFromBezier(bz, t))
 			}
 		}
 	}
-
-	if len(points) < 2 {
-		fmt.Printf("Groupe %s : pas assez de points\n", group.ID)
-		return group
+	for _, point := range points {
+		tailDist := PointDistance(Point{X: 0, Y: 0}, tail)
+		pointDist := PointDistance(Point{X: 0, Y: 0}, point)
+		if tailDist < pointDist {
+			tail = point
+		}
 	}
-
-	// 2. Centroïde
-	var cx, cy float64
-	for _, p := range points {
-		cx += p.X
-		cy += p.Y
-	}
-	cx /= float64(len(points))
-	cy /= float64(len(points))
-
-	// 3. PCA → axe principal (comme avant)
-	var covXX, covXY, covYY float64
-	for _, p := range points {
-		dx := p.X - cx
-		dy := p.Y - cy
-		covXX += dx * dx
-		covXY += dx * dy
-		covYY += dy * dy
-	}
-
-	trace := covXX + covYY
-	det := covXX*covYY - covXY*covXY
-	disc := trace*trace - 4*det
-	if disc < 0 {
-		disc = 0
-	}
-	lambda1 := (trace + math.Sqrt(disc)) / 2
-
-	var vx, vy float64
-	if math.Abs(covXY) > 1e-10 {
-		vx = lambda1 - covYY
-		vy = covXY
+	k := 0.0
+	if tail.X <= 0 && tail.Y > 0 {
+		// quadrant = 1 // 1 * pi
+		k = 1
+	} else if tail.X <= 0 && tail.Y < 0 {
+		// quadrant = 2 // 0 * pi
+		k = 0
+	} else if tail.X > 0 && tail.Y <= 0 {
+		// quadrant = 3 // 0 * pi
+		k = 0
 	} else {
-		if covXX > covYY {
-			vx, vy = 1, 0
-		} else {
-			vx, vy = 0, 1
-		}
+		// quadrant = 4 // 1 * pi
+		k = 1
 	}
-	norm := math.Sqrt(vx*vx + vy*vy)
-	if norm > 1e-10 {
-		vx /= norm
-		vy /= norm
+	a := 0.0
+	if tail.Y != 0 {
+		a = math.Atan(tail.X/tail.Y) + k*math.Pi
+	} else if tail.X != 0 {
+		a = math.Atan(-tail.Y/tail.X) + k*math.Pi
 	}
-
-	// === NOUVELLE PARTIE : Choix du sens de l'axe ===
-
-	// On calcule deux scores pour décider si on garde (vx,vy) ou on flippe (-vx,-vy)
-	var scorePositive, scoreNegative float64
-
-	for _, p := range points {
-		dx := p.X - cx
-		dy := p.Y - cy
-		proj := dx*vx + dy*vy // projection sur l'axe courant
-
-		// On favorise le côté qui a plus de points "lourds" ou extrêmes
-		// Ici : on donne plus de poids aux points éloignés (carré de la projection)
-		if proj > 0 {
-			scorePositive += proj * proj
-		} else {
-			scoreNegative += proj * proj
-		}
-	}
-
-	// Si le côté négatif a plus de "masse", on inverse le vecteur
-	if scoreNegative > scorePositive {
-		vx = -vx
-		vy = -vy
-	}
-
-	// Option alternative de secours (au cas où les deux scores sont trop proches)
-	// → on utilise le point le plus haut en Y brut (fonctionne bien pour icônes debout)
-	if math.Abs(scorePositive-scoreNegative) < 1e-8 { // presque égal
-		var maxY = -math.MaxFloat64
-		var topPoint Point
-		for _, p := range points {
-			if p.Y > maxY { // en SVG, Y plus grand = plus bas → on veut le plus petit Y pour "haut"
-				maxY = p.Y
-				topPoint = p
-			}
-		}
-		dot := (topPoint.X-cx)*vx + (topPoint.Y-cy)*vy
-		if dot < 0 {
-			vx = -vx
-			vy = -vy
-		}
-	}
-
-	// === Fin du choix du sens ===
-
-	// Calcul de la rotation pour aligner l'axe principal avec Y positif (haut)
-	angleRad := math.Atan2(vy, vx)
-	targetRad := math.Pi / 2 // 90° = haut
-	rotationRad := targetRad - angleRad
-	rotationDeg := rotationRad * 180 / math.Pi
-
-	// Normalisation dans [-180, 180]
-	for rotationDeg > 180 {
-		rotationDeg -= 360
-	}
-	for rotationDeg <= -180 {
-		rotationDeg += 360
-	}
-
-	fmt.Printf("Groupe %s → centre: (%.1f, %.1f) | axe principal: %.1f° → rotation: %.1f°\n",
-		group.ID, cx, cy, angleRad*180/math.Pi, rotationDeg)
-
-	return GroupApplyTransformation(group, Transformation{
-		Rotation: rotationDeg,
-		// Si tu veux centrer proprement :
-		// TranslationX: -cx, TranslationY: -cy, puis rotate, puis +cx +cy
-	})
+	// if tail.X && tail.Y == 0 -> dont rotate
+	// fmt.Printf("%s: %f\n", group.ID, a*180/math.Pi)
+	return GroupApplyTransformation(group, Transformation{Rotation: a * 180 / math.Pi})
 }
 
 func parseBodypart(g Group) BodyPart {
