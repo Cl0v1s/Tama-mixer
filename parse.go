@@ -104,10 +104,18 @@ func GetPointFromBezier(bezier Bezier, t float64) Point {
 	return Point{X: math.Round(x*100) / 100, Y: math.Round(y*100) / 100}
 }
 
-func GetRotationFromBezier(bezier Bezier, t float64) float64 {
+func GetRotationFromBezierRadian(bezier Bezier, t float64) float64 {
 	dx := 3*(1-t)*(1-t)*(bezier.P1.X-bezier.P0.X) + 6*(1-t)*t*(bezier.P2.X-bezier.P1.X) + 3*t*t*(bezier.P3.X-bezier.P2.X)
 	dy := 3*(1-t)*(1-t)*(bezier.P1.Y-bezier.P0.Y) + 6*(1-t)*t*(bezier.P2.Y-bezier.P1.Y) + 3*t*t*(bezier.P3.Y-bezier.P2.Y)
-	return math.Atan2(dy, dx) * 180 / math.Pi
+	if dx == 0 {
+		if dy > 0 {
+			return 90
+		} else {
+			return -90
+		}
+	}
+	angle := math.Atan(dy / dx)
+	return angle
 }
 
 func ArcToBeziers(current Point, rx, ry, xAxisRotation float64, largeArcFlag, sweepFlag int, x, y float64) []Bezier {
@@ -427,25 +435,16 @@ func GroupNormalizeRotation(group Group) Group {
 		}
 	}
 	for _, point := range points {
-		tailDist := PointDistance(Point{X: 0, Y: 0}, tail)
-		pointDist := PointDistance(Point{X: 0, Y: 0}, point)
+		tailDist := tail.Distance(Point{X: 0, Y: 0})
+		pointDist := point.Distance(Point{X: 0, Y: 0})
 		if tailDist < pointDist {
 			tail = point
 		}
 	}
-	k := 0.0
-	if tail.X <= 0 && tail.Y > 0 {
-		// quadrant = 1 // 1 * pi
-		k = 1
-	} else if tail.X <= 0 && tail.Y < 0 {
-		// quadrant = 2 // 0 * pi
+	quadrant := tail.Quadrant()
+	k := 1.0
+	if quadrant == 2 || quadrant == 3 {
 		k = 0
-	} else if tail.X > 0 && tail.Y <= 0 {
-		// quadrant = 3 // 0 * pi
-		k = 0
-	} else {
-		// quadrant = 4 // 1 * pi
-		k = 1
 	}
 	a := 0.0
 	if tail.Y != 0 {

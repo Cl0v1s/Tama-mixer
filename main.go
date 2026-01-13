@@ -39,8 +39,8 @@ func main() {
 	fmt.Println("Assembling")
 	for i := 0; i < len(bodies); i++ {
 		// fmt.Printf("%d / %d\n", i, len(bodies))
-		bodies[i] = BodyAssemble(bodies[i])
-		bodies[i] = BodyReframe(bodies[i], 32)
+		bodies[i] = bodies[i].Assemble()
+		bodies[i] = bodies[i].Reframe(32)
 	}
 	fmt.Println("Assembling done")
 

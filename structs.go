@@ -34,7 +34,34 @@ type Point struct {
 	Transform string
 }
 
-func PointDistance(p1 Point, p2 Point) float64 {
+func (p Point) Quadrant() int {
+	if p.X <= 0 && p.Y > 0 {
+		// quadrant = 1 // 1 * pi
+		return 1
+	} else if p.X <= 0 && p.Y < 0 {
+		// quadrant = 2 // 0 * pi
+		return 2
+	} else if p.X > 0 && p.Y <= 0 {
+		// quadrant = 3 // 0 * pi
+		return 3
+	} else {
+		// quadrant = 4 // 1 * pi
+		return 4
+	}
+}
+
+func (p Point) Add(p1 Point) Point {
+	return Point{
+		X: p.X + p1.X,
+		Y: p.Y + p1.Y,
+	}
+}
+
+func (p Point) Sub(p1 Point) Point {
+	return p.Add(Point{X: p1.X * -1, Y: p1.Y * -1})
+}
+
+func (p1 Point) Distance(p2 Point) float64 {
 	return math.Abs(p1.X-p2.X) + math.Abs(p1.Y-p2.Y)
 }
 
@@ -82,9 +109,18 @@ func BodyCopy(body Body) Body {
 	}
 }
 
-func BodyAssemble(body Body) Body {
+func (body Body) Assemble() Body {
 	svg := SVGCopy(body.Svg)
 	label := ""
+
+	baryCentre := Point{X: 0, Y: 0}
+	for _, point := range body.Points {
+		baryCentre = baryCentre.Add(point)
+	}
+	baryCentre.X = baryCentre.X / float64(len(body.Points))
+	baryCentre.Y = baryCentre.Y / float64(len(body.Points))
+
+	bodyGroups := make([]Group, 0)
 	for _, point := range body.Points {
 		index := slices.IndexFunc(body.Parts, func(part BodyPart) bool {
 			return part.Type == point.Type
@@ -96,16 +132,25 @@ func BodyAssemble(body Body) Body {
 		location := point
 		t, bezier := findClosestPointInPaths(GetPathsInSVG(svg), point, 2)
 		if t >= 0 {
-			angle = GetRotationFromBezier(bezier, t)
+			// correct the rotation by the position relative to barycentre
 			location = GetPointFromBezier(bezier, t)
+			normalizedLocation := location.Sub(baryCentre)
+			quadrant := normalizedLocation.Quadrant()
+			k := 1.0
+			if quadrant == 2 || quadrant == 3 {
+				k = 0
+			}
+			angle = (GetRotationFromBezierRadian(bezier, t) + k*math.Pi) * 180 / math.Pi
 		}
 		for _, group := range body.Parts[index].Svg.Groups { // may cause issues if nested groups
 			group = GroupApplyTransformation(group, Transformation{Rotation: angle})
 			group = GroupApplyTransformation(group, Transformation{Translation: location})
-			svg.Groups = append(svg.Groups, group)
+			bodyGroups = append(bodyGroups, group)
 		}
 		label += string(point.Type) + "=" + body.Parts[index].Svg.XMLName.Local + "+"
 	}
+	svg = svg.Merge(bodyGroups)
+
 	svg.XMLName.Space = svg.XMLName.Local
 	svg.XMLName.Local = label
 	body.Svg = svg
@@ -115,7 +160,48 @@ func BodyAssemble(body Body) Body {
 	return body
 }
 
-func BodyReframe(body Body, targetSide int) Body {
+func (s SVG) Merge(groups []Group) SVG {
+	svg := SVGCopy(s)
+	bodyPoints := make([]Point, 0)
+	for _, group := range svg.Groups {
+		for _, path := range group.Paths {
+			commands := ParseD(path.D)
+			bzs := GetBeziersFromCommands(commands)
+			for _, bz := range bzs {
+				for i := 0.0; i <= 1.0; i += 0.1 {
+					bodyPoints = append(bodyPoints, GetPointFromBezier(bz, i))
+				}
+			}
+		}
+	}
+	e := 1.0
+	gps := make([]Group, 0)
+	for _, g := range groups {
+		group := GroupCopy(g)
+		for u := 0; u < len(group.Paths); u++ {
+			commands := ParseD(group.Paths[u].D)
+			bzs := GetBeziersFromCommands(commands)
+			for i := 0; i < len(bzs); i++ {
+				for _, point := range bodyPoints {
+					if bzs[i].P0.Distance(point) < e {
+						bzs[i].P0 = point
+						bzs[i].P1 = point
+					}
+					if bzs[i].P3.Distance(point) < e {
+						bzs[i].P2 = point
+						bzs[i].P3 = point
+					}
+				}
+			}
+			group.Paths[u].D = bezierToD(bzs)
+		}
+		gps = append(gps, group)
+	}
+	svg.Groups = append(svg.Groups, gps...)
+	return svg
+}
+
+func (body Body) Reframe(targetSide int) Body {
 	top := 9999.0
 	bottom := 0.0
 	left := 9999.0
@@ -158,9 +244,9 @@ func BodyReframe(body Body, targetSide int) Body {
 		group = GroupApplyTransformation(group, Transformation{Translation: Point{X: padLeft, Y: padTop}})
 		groups = append(groups, group)
 	}
-	body.Svg.Groups = groups
 
 	body.Svg = SVGCopy(body.Svg)
+	body.Svg.Groups = groups
 	body.Svg.Width = strconv.FormatFloat(side, 'f', -1, 64)
 	body.Svg.Height = strconv.FormatFloat(side, 'f', -1, 64)
 	body.Svg.ViewBox = strconv.FormatFloat(math.Round(left), 'f', -1, 64) + ", " + strconv.FormatFloat(math.Round(top), 'f', -1, 64) + ",  " + strconv.FormatFloat(side, 'f', -1, 64) + " , " + strconv.FormatFloat(side, 'f', -1, 64)
