@@ -25,13 +25,13 @@
      inkscape:document-units="mm"
      inkscape:zoom="9.6669948"
      inkscape:cx="253.43967"
-     inkscape:cy="62.428915"
+     inkscape:cy="145.18473"
      inkscape:window-width="2560"
      inkscape:window-height="1371"
      inkscape:window-x="0"
      inkscape:window-y="0"
      inkscape:window-maximized="1"
-     inkscape:current-layer="layer15"
+     inkscape:current-layer="layer25"
      showguides="true"
      showgrid="false" />
   <defs
@@ -550,8 +550,8 @@
     <ellipse
        style="fill:#ff9631;fill-opacity:1;stroke:none;stroke-width:0.235414;stroke-dasharray:none;stroke-opacity:1"
        id="path10-4-43-763-94-0"
-       cx="54.168724"
-       cy="35.81823"
+       cx="53.265522"
+       cy="35.790859"
        rx="0.72288907"
        ry="0.76093584"
        inkscape:label="arm1" />
@@ -568,8 +568,8 @@
     <ellipse
        style="fill:#ff9631;fill-opacity:1;stroke:none;stroke-width:0.235414;stroke-dasharray:none;stroke-opacity:1"
        id="path10-4-43-763-94-4"
-       cx="62.833824"
-       cy="35.520573"
+       cx="61.930622"
+       cy="35.493202"
        rx="0.72288907"
        ry="0.76093584"
        inkscape:label="arm1" />
@@ -587,8 +587,8 @@
     <ellipse
        style="fill:#ff9631;fill-opacity:1;stroke:none;stroke-width:0.235414;stroke-dasharray:none;stroke-opacity:1"
        id="path10-4-43-763-94-2"
-       cx="-60.302834"
-       cy="37.120785"
+       cx="-59.344891"
+       cy="37.093414"
        rx="0.72288907"
        ry="0.76093584"
        inkscape:label="arm2"
@@ -607,8 +607,8 @@
     <ellipse
        style="fill:#ff9631;fill-opacity:1;stroke:none;stroke-width:0.235414;stroke-dasharray:none;stroke-opacity:1"
        id="path10-4-43-763-94-6"
-       cx="-69.034081"
-       cy="36.756981"
+       cx="-68.130875"
+       cy="36.811722"
        rx="0.72288907"
        ry="0.76093584"
        inkscape:label="arm2"
