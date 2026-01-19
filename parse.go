@@ -4,6 +4,7 @@ import (
 	"encoding/xml"
 	"math"
 	"os"
+	"regexp"
 	"slices"
 	"strconv"
 	"strings"
@@ -378,9 +379,20 @@ func parseBody(g Group) Body {
 		ViewBox: "0 0 100 100",
 		Groups:  []Group{group},
 	}
+	frameReg := regexp.MustCompile("(.+)-([0-9]+)")
+	matches := frameReg.FindStringSubmatch(group.ID)
+	if len(matches) < 3 {
+		panic(group.Label + "-" + group.ID + " bad name")
+	}
+	frame, err := strconv.ParseInt(matches[2], 10, 64)
+	if err != nil {
+		panic(err)
+	}
 	return Body{
 		Points: anchors,
 		Svg:    svg,
+		Frame:  int(frame),
+		Name:   matches[1],
 	}
 }
 
@@ -478,9 +490,20 @@ func parseBodypart(g Group) BodyPart {
 		ViewBox: "-50 -50 100 100",
 		Groups:  []Group{group},
 	}
+	frameReg := regexp.MustCompile("(.+)-([0-9]+)")
+	matches := frameReg.FindStringSubmatch(group.ID)
+	if len(matches) < 3 {
+		panic(group.Label + "-" + group.ID + " bad name")
+	}
+	frame, err := strconv.ParseInt(matches[2], 10, 64)
+	if err != nil {
+		panic(err)
+	}
 	return BodyPart{
-		Svg:  svg,
-		Type: BodypartType(group.Label),
+		Svg:   svg,
+		Type:  BodypartType(group.Label),
+		Frame: int(frame),
+		Name:  matches[1],
 	}
 }
 
@@ -495,4 +518,68 @@ func Sort(root SVG) ([]Body, []BodyPart) {
 		}
 	}
 	return bodies, bodyparts
+}
+
+func GroupBodyParts(bodyparts []BodyPart) [][]BodyPart {
+	if len(bodyparts) == 0 {
+		return [][]BodyPart{}
+	}
+
+	slices.SortFunc(bodyparts, func(a, b BodyPart) int {
+		if cmp := strings.Compare(a.Name, b.Name); cmp != 0 {
+			return cmp
+		}
+		return strings.Compare(string(a.Type), string(b.Type))
+	})
+
+	results := make([][]BodyPart, 0)
+	currentGroup := make([]BodyPart, 0)
+
+	prevName := bodyparts[0].Name
+	prevType := bodyparts[0].Type
+
+	for i := range bodyparts {
+		bp := bodyparts[i]
+
+		if bp.Name != prevName || bp.Type != prevType {
+			if len(currentGroup) > 0 {
+				results = append(results, currentGroup)
+				currentGroup = make([]BodyPart, 0)
+			}
+			prevName = bp.Name
+			prevType = bp.Type
+		}
+
+		currentGroup = append(currentGroup, bp)
+	}
+
+	if len(currentGroup) > 0 {
+		results = append(results, currentGroup)
+	}
+
+	return results
+}
+
+func GroupBodies(bodies []Body) [][]Body {
+	if len(bodies) == 0 {
+		return [][]Body{}
+	}
+	slices.SortFunc(bodies, func(a Body, b Body) int {
+		return strings.Compare(a.Name, b.Name)
+	})
+	results := make([][]Body, 0)
+	current := make([]Body, 0)
+	currentExpression := bodies[0].Name
+	for _, bodyparts := range bodies {
+		if bodyparts.Name != currentExpression {
+			currentExpression = bodyparts.Name
+			results = append(results, current)
+			current = make([]Body, 0)
+		}
+		current = append(current, bodyparts)
+	}
+	if len(current) > 0 {
+		results = append(results, current)
+	}
+	return results
 }

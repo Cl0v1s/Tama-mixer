@@ -143,6 +143,7 @@ func ParseFrame(filename string) Frame {
 		if err != nil {
 			panic(err)
 		}
+		frame.Form += "-" + matches[2]
 		stepsMap[matches[1]] = int(f)
 	}
 	value, ok := stepsMap[string(BodypartType_Eye)]

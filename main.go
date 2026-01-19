@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/xml"
-	"fmt"
 	"os"
 )
 
@@ -12,49 +11,18 @@ func main() {
 		panic(err)
 	}
 	defer file.Close()
-
 	var svg SVG
 	decoder := xml.NewDecoder(file)
-
 	if err := decoder.Decode(&svg); err != nil {
 		panic(err)
 	}
-
 	bodies, bodyparts := Sort(svg)
-
-	for _, bodypart := range bodyparts {
-		Save("out/bodyparts", bodypart.Svg)
+	bodiesGroups := GroupBodies(bodies)
+	bodypartsGroups := GroupBodyParts(bodyparts)
+	for _, group := range bodypartsGroups {
+		SaveBodyPartsToJSON("out/bodyparts/", group)
 	}
-
-	for _, body := range bodies {
-		Save("out/bodies", body.Svg)
+	for _, group := range bodiesGroups {
+		SaveBodiesToJSON("out/bodies/", group)
 	}
-
-	bodies = bodies[0:1]
-
-	fmt.Println("Mixing")
-	bodies = Mix(bodies, bodyparts)
-	bodies = bodies[0:100]
-	fmt.Println("Mixing done")
-	fmt.Println("Assembling")
-	for i := 0; i < len(bodies); i++ {
-		// fmt.Printf("%d / %d\n", i, len(bodies))
-		bodies[i] = bodies[i].Assemble()
-		bodies[i] = bodies[i].Reframe(32)
-	}
-	fmt.Println("Assembling done")
-
-	for _, body := range bodies {
-		Save("out/generated", body.Svg)
-	}
-	return
-
-	grouppedFrames := ParseFrames("out/generated")
-
-	for _, formGroup := range grouppedFrames {
-		for _, expressionGroup := range formGroup {
-			SaveFrames("out/generated", "out/sorted", expressionGroup)
-		}
-	}
-
 }

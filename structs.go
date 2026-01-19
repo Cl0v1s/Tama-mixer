@@ -1,9 +1,11 @@
 package main
 
 import (
+	"encoding/json"
 	"encoding/xml"
 	"fmt"
 	"math"
+	"os"
 	"slices"
 	"strconv"
 	"strings"
@@ -91,9 +93,53 @@ var PointsOrder = map[string]int{
 }
 
 type Body struct {
-	Svg    SVG
-	Points []Point
-	Parts  []BodyPart
+	Svg    SVG        `json:"svg"`
+	Points []Point    `json:"points"`
+	Parts  []BodyPart `json:"parts"`
+	Frame  int        `json:"frame"`
+	Name   string     `json:"name"`
+}
+
+func (b Body) MarshalJSON() ([]byte, error) {
+	type Alias Body
+
+	svgBytes, _ := xml.Marshal(b.Svg) // ← on n'utilise PAS .String() ici !
+
+	return json.Marshal(&struct {
+		Svg string `json:"svg"`
+		*Alias
+	}{
+		Svg:   string(svgBytes),
+		Alias: (*Alias)(&b),
+	})
+}
+
+func SaveBodyPartsToJSON(prefix string, bodyparts []BodyPart) error {
+	_ = os.MkdirAll(prefix, 0755)
+	filename := string(bodyparts[0].Type) + "-" + bodyparts[0].Name + ".json"
+	file, err := os.Create(prefix + "/" + filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(bodyparts)
+}
+
+func SaveBodiesToJSON(prefix string, bodies []Body) error {
+	_ = os.MkdirAll(prefix, 0755)
+	filename := bodies[0].Name + ".json"
+	file, err := os.Create(prefix + "/" + filename)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	encoder.SetIndent("", "  ")
+	return encoder.Encode(bodies)
 }
 
 func BodyCopy(body Body) Body {
@@ -283,8 +329,22 @@ func BodyGetMissingPart(body Body) (error, Point) {
 }
 
 type BodyPart struct {
-	Svg  SVG
-	Type BodypartType
+	Svg   SVG          `json:"svg"`
+	Type  BodypartType `json:"type"`
+	Frame int          `json:"frame"`
+	Name  string       `json:"name"`
+}
+
+func (bp BodyPart) MarshalJSON() ([]byte, error) {
+	type Alias BodyPart // évite la récursion infinie
+
+	return json.Marshal(&struct {
+		Svg string `json:"svg"`
+		*Alias
+	}{
+		Svg:   string(bp.Svg.String()), // ← conversion explicite en string
+		Alias: (*Alias)(&bp),
+	})
 }
 
 type SVG struct {
@@ -295,6 +355,14 @@ type SVG struct {
 	Xmlns   string   `xml:"xmlns,attr"`
 
 	Groups []Group `xml:"g"`
+}
+
+func (s SVG) String() string {
+	data, err := xml.MarshalIndent(s, "", "  ")
+	if err != nil {
+		return "" // ou gérer l'erreur selon votre besoin
+	}
+	return string(data)
 }
 
 func SVGCopy(svg SVG) SVG {
