@@ -103,32 +103,6 @@ func TestGetPointFromBezier(t *testing.T) {
 	}
 }
 
-func TestGetRotationFromBezier(t *testing.T) {
-	bezier := Bezier{
-		P0: Point{X: 0, Y: 0},
-		P1: Point{X: 1, Y: 0},
-		P2: Point{X: 2, Y: 0},
-		P3: Point{X: 3, Y: 0},
-	}
-	got := GetRotationFromBezier(bezier, 0.5)
-	want := 0.0
-	if math.Abs(got-want) > 1e-9 {
-		t.Errorf("got %v, want %v", got, want)
-	}
-
-	bezier = Bezier{
-		P0: Point{X: 0, Y: 0},
-		P1: Point{X: 0, Y: 1},
-		P2: Point{X: 0, Y: 2},
-		P3: Point{X: 0, Y: 3},
-	}
-	got = GetRotationFromBezier(bezier, 0.5)
-	want = 90.0
-	if math.Abs(got-want) > 1e-9 {
-		t.Errorf("got %v, want %v", got, want)
-	}
-}
-
 func TestFindClosestPointInPathSimple(t *testing.T) {
 	paths := []Path{{D: "M 130 10 C 120 20, 180 20, 170 10"}}
 	got, _ := findClosestPointInPaths(

@@ -110,9 +110,9 @@ func GetRotationFromBezierRadian(bezier Bezier, t float64) float64 {
 	dy := 3*(1-t)*(1-t)*(bezier.P1.Y-bezier.P0.Y) + 6*(1-t)*t*(bezier.P2.Y-bezier.P1.Y) + 3*t*t*(bezier.P3.Y-bezier.P2.Y)
 	if dx == 0 {
 		if dy > 0 {
-			return 90
+			return 0.5 * math.Pi
 		} else {
-			return -90
+			return 0.5 * math.Pi
 		}
 	}
 	angle := math.Atan(dy / dx)
@@ -304,10 +304,11 @@ func findLowestPadding(g Group) (float64, float64) {
 	return x, y
 }
 
-func RetrievePoints(group *Group, rootLabel string) []Point {
+func RetrievePoints(group *Group, rootLabel string) ([]Point, Point) {
 	points := make([]Point, 0)
 	for _, g := range group.Groups {
-		points = append(points, RetrievePoints(&g, rootLabel)...)
+		pts, _ := RetrievePoints(&g, rootLabel)
+		points = append(points, pts...)
 	}
 	i := 0
 	for _, e := range group.Ellipses {
@@ -346,10 +347,59 @@ func RetrievePoints(group *Group, rootLabel string) []Point {
 		}
 	}
 	group.Paths = group.Paths[:i]
+
+	// get barycentre from anchor points
+	baryCentre := Point{X: 0, Y: 0}
+	for _, point := range points {
+		baryCentre = baryCentre.Add(point)
+	}
+	baryCentre.X = baryCentre.X / float64(len(points))
+	baryCentre.Y = baryCentre.Y / float64(len(points))
+
+	// calculate all points around bodyshape and get tan corrected by quadrant for each of them
+	size := Point{}
+	bodyPoints := make([]Point, 0)
+	for _, path := range GetPathsInGroup(*group) {
+		cmds := ParseD(path.D)
+		bzs := GetBeziersFromCommands(cmds)
+		for _, bz := range bzs {
+			for u := 0.0; u <= 1.0; u += 0.05 {
+				location := GetPointFromBezier(bz, u)
+				normalizedLocation := location.Sub(baryCentre)
+				quadrant := normalizedLocation.Quadrant()
+				k := 1.0
+				if quadrant == 2 || quadrant == 3 {
+					k = 0
+				}
+				angle := (GetRotationFromBezierRadian(bz, u) + k*math.Pi) * 180 / math.Pi
+				location.T = angle
+
+				if location.X > size.X {
+					size.X = location.X
+				}
+				if location.Y > size.Y {
+					size.Y = location.Y
+				}
+
+				bodyPoints = append(bodyPoints, location)
+			}
+		}
+	}
+
+	// Place anchor on exact body point
+	for u := 0; u < len(points); u++ {
+		for _, point := range bodyPoints {
+			if points[u].Distance(point) < 1 {
+				points[u].X = point.X
+				points[u].Y = point.Y
+				points[u].T = point.T
+			}
+		}
+	}
 	slices.SortFunc(points, func(a Point, b Point) int {
 		return PointsOrder[string(a.Type)] - PointsOrder[string(b.Type)]
 	})
-	return points
+	return points, size
 }
 
 func CleanGroup(group *Group) {
@@ -366,19 +416,8 @@ func parseBody(g Group) Body {
 	group.ID = group.Label
 	group.Label = "body"
 	x, y := findLowestPadding(group)
-	group = GroupApplyTransformation(group, Transformation{Translation: Point{X: -x, Y: -y}})
-	anchors := RetrievePoints(&group, group.Label)
-	svg := SVG{
-		XMLName: xml.Name{
-			Space: group.Label,
-			Local: group.ID,
-		},
-		Xmlns:   "http://www.w3.org/2000/svg",
-		Width:   "100",
-		Height:  "100",
-		ViewBox: "0 0 100 100",
-		Groups:  []Group{group},
-	}
+	group = group.Transform(Transformation{Translation: Point{X: -x, Y: -y}})
+	anchors, size := RetrievePoints(&group, group.Label)
 	frameReg := regexp.MustCompile("(.+)-([0-9]+)")
 	matches := frameReg.FindStringSubmatch(group.ID)
 	if len(matches) < 3 {
@@ -389,10 +428,11 @@ func parseBody(g Group) Body {
 		panic(err)
 	}
 	return Body{
+		Path:   group.GetPath().D,
 		Points: anchors,
-		Svg:    svg,
 		Frame:  int(frame),
 		Name:   matches[1],
+		Size:   size,
 	}
 }
 
@@ -464,9 +504,7 @@ func GroupNormalizeRotation(group Group) Group {
 	} else if tail.X != 0 {
 		a = math.Atan(-tail.Y/tail.X) + k*math.Pi
 	}
-	// if tail.X && tail.Y == 0 -> dont rotate
-	// fmt.Printf("%s: %f\n", group.ID, a*180/math.Pi)
-	return GroupApplyTransformation(group, Transformation{Rotation: a * 180 / math.Pi})
+	return group.Transform(Transformation{Rotation: a * 180 / math.Pi})
 }
 
 func parseBodypart(g Group) BodyPart {
@@ -474,21 +512,10 @@ func parseBodypart(g Group) BodyPart {
 	group.ID = group.Label
 	group.Label = group.Ellipses[0].Label
 	anchor := findElementPosition(group, group.Label)
-	group = GroupApplyTransformation(group, Transformation{Translation: Point{X: anchor.X * -1, Y: anchor.Y * -1}})
+	group = group.Transform(Transformation{Translation: Point{X: anchor.X * -1, Y: anchor.Y * -1}})
 	CleanGroup(&group)
 	if group.Label != "eye" && group.Label != "mouth" {
 		group = GroupNormalizeRotation(group)
-	}
-	svg := SVG{
-		XMLName: xml.Name{
-			Space: group.Label,
-			Local: group.ID,
-		},
-		Xmlns:   "http://www.w3.org/2000/svg",
-		Width:   "100",
-		Height:  "100",
-		ViewBox: "-50 -50 100 100",
-		Groups:  []Group{group},
 	}
 	frameReg := regexp.MustCompile("(.+)-([0-9]+)")
 	matches := frameReg.FindStringSubmatch(group.ID)
@@ -500,7 +527,7 @@ func parseBodypart(g Group) BodyPart {
 		panic(err)
 	}
 	return BodyPart{
-		Svg:   svg,
+		Path:  group.GetPath().D,
 		Type:  BodypartType(group.Label),
 		Frame: int(frame),
 		Name:  matches[1],

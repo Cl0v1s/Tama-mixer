@@ -3,10 +3,8 @@ package main
 import (
 	"encoding/json"
 	"encoding/xml"
-	"fmt"
 	"math"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 )
@@ -29,11 +27,24 @@ type Bezier struct {
 	P3 Point
 }
 
+func BeziersToD(beziers []Bezier) string {
+	result := ""
+	for _, b := range beziers {
+		result += " M " + strconv.FormatFloat(b.P0.X, 'f', -1, 64) + " " + strconv.FormatFloat(b.P0.Y, 'f', -1, 64)
+		points := []Point{b.P1, b.P2, b.P3}
+		result += " C "
+		for _, p := range points {
+			result += strconv.FormatFloat(p.X, 'f', -1, 64) + " " + strconv.FormatFloat(p.Y, 'f', -1, 64) + " "
+		}
+	}
+	return result
+}
+
 type Point struct {
-	X         float64
-	Y         float64
-	Type      BodypartType
-	Transform string
+	X    float64
+	Y    float64
+	T    float64
+	Type BodypartType
 }
 
 func (p Point) Quadrant() int {
@@ -67,7 +78,7 @@ func (p1 Point) Distance(p2 Point) float64 {
 	return math.Abs(p1.X-p2.X) + math.Abs(p1.Y-p2.Y)
 }
 
-func PointRotate(p Point, angleDeg float64) Point {
+func (p Point) Rotate(angleDeg float64) Point {
 	angle := angleDeg * (math.Pi / 180)
 	return Point{
 		X: p.X*math.Cos(angle) - p.Y*math.Sin(angle),
@@ -75,7 +86,7 @@ func PointRotate(p Point, angleDeg float64) Point {
 	}
 }
 
-func PointTranslate(p Point, t Point) Point {
+func (p Point) Translate(t Point) Point {
 	return Point{
 		X: p.X + t.X,
 		Y: p.Y + t.Y,
@@ -93,25 +104,11 @@ var PointsOrder = map[string]int{
 }
 
 type Body struct {
-	Svg    SVG        `json:"svg"`
-	Points []Point    `json:"points"`
-	Parts  []BodyPart `json:"parts"`
-	Frame  int        `json:"frame"`
-	Name   string     `json:"name"`
-}
-
-func (b Body) MarshalJSON() ([]byte, error) {
-	type Alias Body
-
-	svgBytes, _ := xml.Marshal(b.Svg) // ← on n'utilise PAS .String() ici !
-
-	return json.Marshal(&struct {
-		Svg string `json:"svg"`
-		*Alias
-	}{
-		Svg:   string(svgBytes),
-		Alias: (*Alias)(&b),
-	})
+	Path   string  `json:"path"`
+	Points []Point `json:"points"`
+	Frame  int     `json:"frame"`
+	Name   string  `json:"name"`
+	Size   Point   `json:"size"`
 }
 
 func SaveBodyPartsToJSON(prefix string, bodyparts []BodyPart) error {
@@ -142,209 +139,11 @@ func SaveBodiesToJSON(prefix string, bodies []Body) error {
 	return encoder.Encode(bodies)
 }
 
-func BodyCopy(body Body) Body {
-	points := make([]Point, len(body.Points))
-	copy(points, body.Points)
-	parts := make([]BodyPart, len(body.Parts))
-	copy(parts, body.Parts)
-	svg := body.Svg
-	return Body{
-		Svg:    svg,
-		Points: points,
-		Parts:  parts,
-	}
-}
-
-func (body Body) Assemble() Body {
-	svg := SVGCopy(body.Svg)
-	label := ""
-
-	baryCentre := Point{X: 0, Y: 0}
-	for _, point := range body.Points {
-		baryCentre = baryCentre.Add(point)
-	}
-	baryCentre.X = baryCentre.X / float64(len(body.Points))
-	baryCentre.Y = baryCentre.Y / float64(len(body.Points))
-
-	bodyGroups := make([]Group, 0)
-	for _, point := range body.Points {
-		index := slices.IndexFunc(body.Parts, func(part BodyPart) bool {
-			return part.Type == point.Type
-		})
-		if index == -1 {
-			continue
-		}
-		angle := 0.0
-		location := point
-		t, bezier := findClosestPointInPaths(GetPathsInSVG(svg), point, 2)
-		if t >= 0 {
-			// correct the rotation by the position relative to barycentre
-			location = GetPointFromBezier(bezier, t)
-			normalizedLocation := location.Sub(baryCentre)
-			quadrant := normalizedLocation.Quadrant()
-			k := 1.0
-			if quadrant == 2 || quadrant == 3 {
-				k = 0
-			}
-			angle = (GetRotationFromBezierRadian(bezier, t) + k*math.Pi) * 180 / math.Pi
-		}
-		for _, group := range body.Parts[index].Svg.Groups { // may cause issues if nested groups
-			group = GroupApplyTransformation(group, Transformation{Rotation: angle})
-			group = GroupApplyTransformation(group, Transformation{Translation: location})
-			bodyGroups = append(bodyGroups, group)
-		}
-		label += string(point.Type) + "=" + body.Parts[index].Svg.XMLName.Local + "+"
-	}
-	svg = svg.Merge(bodyGroups)
-
-	svg.XMLName.Space = svg.XMLName.Local
-	svg.XMLName.Local = label
-	body.Svg = svg
-	// we prevent further assemble
-	body.Points = make([]Point, 0)
-	body.Parts = make([]BodyPart, 0)
-	return body
-}
-
-func (s SVG) Merge(groups []Group) SVG {
-	svg := SVGCopy(s)
-	bodyPoints := make([]Point, 0)
-	for _, group := range svg.Groups {
-		for _, path := range group.Paths {
-			commands := ParseD(path.D)
-			bzs := GetBeziersFromCommands(commands)
-			for _, bz := range bzs {
-				for i := 0.0; i <= 1.0; i += 0.1 {
-					bodyPoints = append(bodyPoints, GetPointFromBezier(bz, i))
-				}
-			}
-		}
-	}
-	e := 1.0
-	gps := make([]Group, 0)
-	for _, g := range groups {
-		group := GroupCopy(g)
-		for u := 0; u < len(group.Paths); u++ {
-			commands := ParseD(group.Paths[u].D)
-			bzs := GetBeziersFromCommands(commands)
-			for i := 0; i < len(bzs); i++ {
-				for _, point := range bodyPoints {
-					if bzs[i].P0.Distance(point) < e {
-						bzs[i].P0 = point
-						bzs[i].P1 = point
-					}
-					if bzs[i].P3.Distance(point) < e {
-						bzs[i].P2 = point
-						bzs[i].P3 = point
-					}
-				}
-			}
-			group.Paths[u].D = bezierToD(bzs)
-		}
-		gps = append(gps, group)
-	}
-	svg.Groups = append(svg.Groups, gps...)
-	return svg
-}
-
-func (body Body) Reframe(targetSide int) Body {
-	top := 9999.0
-	bottom := 0.0
-	left := 9999.0
-	right := 0.0
-	paths := GetPathsInSVG(body.Svg)
-	for _, path := range paths {
-		commands := ParseD(path.D)
-		beziers := GetBeziersFromCommands(commands)
-		for _, bezier := range beziers {
-			for i := 0.0; i <= 1.0; i += 0.01 {
-				point := GetPointFromBezier(bezier, i)
-				if point.X < left {
-					left = point.X
-				}
-				if point.X > right {
-					right = point.X
-				}
-				if point.Y < top {
-					top = point.Y
-				}
-				if point.Y > bottom {
-					bottom = point.Y
-				}
-			}
-		}
-	}
-	w := right - left
-	h := bottom - top
-	side := math.Max(w, h)
-	factor := side / float64(targetSide)
-	if factor > 1 {
-		side = math.Ceil(factor) * float64(targetSide)
-	}
-
-	padLeft := side/2 - w/2
-	padTop := side - h
-
-	groups := make([]Group, 0)
-	for _, group := range body.Svg.Groups { // may cause issues if nested groups
-		group = GroupApplyTransformation(group, Transformation{Translation: Point{X: padLeft, Y: padTop}})
-		groups = append(groups, group)
-	}
-
-	body.Svg = SVGCopy(body.Svg)
-	body.Svg.Groups = groups
-	body.Svg.Width = strconv.FormatFloat(side, 'f', -1, 64)
-	body.Svg.Height = strconv.FormatFloat(side, 'f', -1, 64)
-	body.Svg.ViewBox = strconv.FormatFloat(math.Round(left), 'f', -1, 64) + ", " + strconv.FormatFloat(math.Round(top), 'f', -1, 64) + ",  " + strconv.FormatFloat(side, 'f', -1, 64) + " , " + strconv.FormatFloat(side, 'f', -1, 64)
-	return body
-}
-
-func BodyIsCompatible(body Body, tpe BodypartType) bool {
-	index := slices.IndexFunc(body.Points, func(p Point) bool { return p.Type == tpe })
-	if index == -1 {
-		return false
-	}
-	return true
-}
-
-func BodyGetBodypart(body Body, tpe BodypartType) (error, BodyPart) {
-	index := slices.IndexFunc(body.Parts, func(p BodyPart) bool { return p.Type == tpe })
-	if index == -1 {
-		return fmt.Errorf("Body does not have a part named %s", tpe), BodyPart{}
-	}
-	return nil, body.Parts[index]
-}
-
-func BodyGetMissingPart(body Body) (error, Point) {
-	missingPoints := make([]Point, len(body.Points))
-	copy(missingPoints, body.Points)
-	for _, part := range body.Parts {
-		index := slices.IndexFunc(missingPoints, func(p Point) bool { return p.Type == part.Type })
-		missingPoints = append(missingPoints[:index], missingPoints[index+1:]...)
-	}
-	if len(missingPoints) == 0 {
-		return fmt.Errorf("Body is complete."), Point{}
-	}
-	return nil, missingPoints[0]
-}
-
 type BodyPart struct {
-	Svg   SVG          `json:"svg"`
+	Path  string       `json:"path"`
 	Type  BodypartType `json:"type"`
 	Frame int          `json:"frame"`
 	Name  string       `json:"name"`
-}
-
-func (bp BodyPart) MarshalJSON() ([]byte, error) {
-	type Alias BodyPart // évite la récursion infinie
-
-	return json.Marshal(&struct {
-		Svg string `json:"svg"`
-		*Alias
-	}{
-		Svg:   string(bp.Svg.String()), // ← conversion explicite en string
-		Alias: (*Alias)(&bp),
-	})
 }
 
 type SVG struct {
@@ -363,16 +162,6 @@ func (s SVG) String() string {
 		return "" // ou gérer l'erreur selon votre besoin
 	}
 	return string(data)
-}
-
-func SVGCopy(svg SVG) SVG {
-	s := svg
-	groups := make([]Group, 0)
-	for _, g := range svg.Groups {
-		groups = append(groups, GroupCopy(g))
-	}
-	s.Groups = groups
-	return s
 }
 
 type Transformation struct {
@@ -405,18 +194,47 @@ func GroupCopy(group Group) Group {
 	circles := make([]Circle, len(group.Circles))
 	copy(circles, group.Circles)
 	g.Circles = circles
-
 	return g
 }
 
-func GroupApplyTransformation(group Group, t Transformation) Group {
+func (group Group) GetPath() Path {
+	paths := GetPathsInGroup(group)
+	resultCmds := make([]string, 0)
+	for _, path := range paths {
+		cmds := ParseD(path.D)
+		if cmds[0].Type != "M" {
+			x := 0.0
+			y := 0.0
+			if len(cmds[0].Args) >= 1 {
+				x += cmds[0].Args[0]
+			}
+			if len(cmds[0].Args) >= 2 {
+				y += cmds[0].Args[1]
+			}
+			resultCmds = append(resultCmds, "M "+strconv.FormatFloat(x, 'f', 2, 64)+","+strconv.FormatFloat(y, 'f', 2, 64))
+		}
+		for _, cmd := range cmds {
+			args := make([]string, 0)
+			for _, a := range cmd.Args {
+				args = append(args, strconv.FormatFloat(a, 'f', 2, 64))
+			}
+			resultCmds = append(resultCmds, cmd.Type+" "+strings.Join(args, ","))
+		}
+	}
+	return Path{
+		D: strings.Join(resultCmds, " "),
+	}
+}
+
+// Apply transformations to a group, for then, all coords are absolute
+func (group Group) Transform(t Transformation) Group {
 	result := GroupCopy(group)
 
 	ellipsis := make([]Ellipse, 0)
 	for _, el := range group.Ellipses {
 		p := Point{X: el.CX, Y: el.CY}
-		p = PointTranslate(p, t.Translation)
-		p = PointRotate(p, t.Rotation)
+		p = p.Translate(t.Translation)
+		p = p.Rotate(t.Rotation)
 		el.CX = p.X
 		el.CY = p.Y
 		ellipsis = append(ellipsis, el)
@@ -426,8 +244,8 @@ func GroupApplyTransformation(group Group, t Transformation) Group {
 	circles := make([]Circle, 0)
 	for _, ci := range group.Circles {
 		p := Point{X: ci.CX, Y: ci.CY}
-		p = PointTranslate(p, t.Translation)
-		p = PointRotate(p, t.Rotation)
+		p = p.Translate(t.Translation)
+		p = p.Rotate(t.Rotation)
 		ci.CX = p.X
 		ci.CY = p.Y
 		circles = append(circles, ci)
@@ -440,7 +258,7 @@ func GroupApplyTransformation(group Group, t Transformation) Group {
 	for _, g := range groups {
 		// we remove path as they are alreay retrieve by GetPathsInGroup
 		g.Paths = []Path{}
-		groups = append(groups, GroupApplyTransformation(g, t))
+		groups = append(groups, g.Transform(t))
 	}
 	result.Groups = groups
 
@@ -449,21 +267,21 @@ func GroupApplyTransformation(group Group, t Transformation) Group {
 		commands := ParseD(paths[i].D)
 		beziers := GetBeziersFromCommands(commands)
 		for u := 0; u < len(beziers); u++ {
-			beziers[u].P0 = PointTranslate(beziers[u].P0, t.Translation)
-			beziers[u].P1 = PointTranslate(beziers[u].P1, t.Translation)
-			beziers[u].P2 = PointTranslate(beziers[u].P2, t.Translation)
-			beziers[u].P3 = PointTranslate(beziers[u].P3, t.Translation)
+			beziers[u].P0 = beziers[u].P0.Translate(t.Translation)
+			beziers[u].P1 = beziers[u].P1.Translate(t.Translation)
+			beziers[u].P2 = beziers[u].P2.Translate(t.Translation)
+			beziers[u].P3 = beziers[u].P3.Translate(t.Translation)
 
-			beziers[u].P0 = PointRotate(beziers[u].P0, t.Rotation)
-			beziers[u].P1 = PointRotate(beziers[u].P1, t.Rotation)
-			beziers[u].P2 = PointRotate(beziers[u].P2, t.Rotation)
-			beziers[u].P3 = PointRotate(beziers[u].P3, t.Rotation)
+			beziers[u].P0 = beziers[u].P0.Rotate(t.Rotation)
+			beziers[u].P1 = beziers[u].P1.Rotate(t.Rotation)
+			beziers[u].P2 = beziers[u].P2.Rotate(t.Rotation)
+			beziers[u].P3 = beziers[u].P3.Rotate(t.Rotation)
 		}
 		p := Path{
 			ID:    paths[i].ID,
 			Label: paths[i].Label,
 			Style: paths[i].Style,
-			D:     bezierToD(beziers),
+			D:     BeziersToD(beziers),
 		}
 		finalPaths = append(finalPaths, p)
 	}
@@ -499,52 +317,4 @@ type Path struct {
 	Label string `xml:"label,attr"`
 	D     string `xml:"d,attr"`
 	Style string `xml:"style,attr"`
-}
-
-func PrintCommands(cmds []Command) {
-	for i, cmd := range cmds {
-		fmt.Printf(
-			"%02d | %s %v\n",
-			i,
-			cmd.Type,
-			cmd.Args,
-		)
-	}
-}
-
-func MarshalD(cmd Command) string {
-	var b strings.Builder
-
-	// Lettre de commande
-	b.WriteString(cmd.Type)
-
-	// Arguments
-	for _, arg := range cmd.Args {
-		b.WriteByte(' ')
-		b.WriteString(strconv.FormatFloat(arg, 'f', -1, 64))
-	}
-
-	return b.String()
-}
-
-type Expression int
-
-const (
-	Expression_Idle Expression = iota
-	Expression_Happy
-	Expression_Angry
-)
-
-var AllExpressions = []Expression{Expression_Idle, Expression_Happy, Expression_Angry}
-
-type Frame struct {
-	Filename   string
-	Form       string
-	Expression int
-	BodyFrame  int
-	MouthFrame int
-	Leg1Frame  int
-	Leg2Frame  int
-	Arm1Frame  int
-	Arm2Frame  int
 }

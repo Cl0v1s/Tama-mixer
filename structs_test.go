@@ -1,11 +1,5 @@
 package main
 
-import (
-	"encoding/xml"
-	"strings"
-	"testing"
-)
-
 const same = `
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
 <svg
@@ -50,29 +44,3 @@ const same = `
   </g>
 </svg>
 `
-
-func TestBodyGetMissingPart(t *testing.T) {
-	var svg SVG
-	file := strings.NewReader(same)
-	decoder := xml.NewDecoder(file)
-	decoder.Decode(&svg)
-	bodies, _ := Sort(svg)
-	body := bodies[0]
-	_, got := BodyGetMissingPart(body)
-	want := "eye"
-	if got.Type != BodypartType(want) {
-		t.Errorf("Got %s expected %s", got.Type, want)
-	}
-	body.Parts = append(body.Parts, BodyPart{Type: "eye"})
-	_, got = BodyGetMissingPart(body)
-	want = "eye"
-	if got.Type != BodypartType(want) {
-		t.Errorf("Got %s expected %s", got.Type, want)
-	}
-	body.Parts = append(body.Parts, BodyPart{Type: "eye"})
-	_, got = BodyGetMissingPart(body)
-	want = "mouth"
-	if got.Type != BodypartType(want) {
-		t.Errorf("Got %s expected %s", got.Type, want)
-	}
-}
