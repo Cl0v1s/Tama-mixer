@@ -388,14 +388,18 @@ func RetrievePoints(group *Group, rootLabel string) ([]Point, Point) {
 
 	// Place anchor on exact body point
 	for u := 0; u < len(points); u++ {
+		shortest := math.MaxFloat64
 		for _, point := range bodyPoints {
-			if points[u].Distance(point) < 1 {
+			distance := points[u].Distance(point)
+			if shortest > distance && distance < 2 {
 				points[u].X = point.X
 				points[u].Y = point.Y
 				points[u].T = point.T
+				shortest = distance
 			}
 		}
 	}
+
 	slices.SortFunc(points, func(a Point, b Point) int {
 		return PointsOrder[string(a.Type)] - PointsOrder[string(b.Type)]
 	})

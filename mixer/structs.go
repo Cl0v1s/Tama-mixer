@@ -41,10 +41,10 @@ func BeziersToD(beziers []Bezier) string {
 }
 
 type Point struct {
-	X    float64
-	Y    float64
-	T    float64
-	Type BodypartType
+	X    float64      `json:"x"`
+	Y    float64      `json:"y"`
+	T    float64      `json:"t"`
+	Type BodypartType `json:"type"`
 }
 
 func (p Point) Quadrant() int {
