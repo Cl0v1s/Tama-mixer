@@ -1,7 +1,7 @@
 import Eggplant from './../../mixer/out/bodies/eggplant.json'
 import PeanutMouth from './../../mixer/out/bodyparts/mouth-peanutmouth.json'
 import { Context } from './Canvas'
-import { BodyFrame, PartFrame } from './types'
+import { BodyFrame, PartFrame, Point } from './types'
 
 
 let BODIES: BodyFrame[][] = []
@@ -42,9 +42,9 @@ export class Pet {
     public x = 10;
     public y = 10;
 
-    private clippingPath: Path2D
     private bodyPath: Path2D
-    private partsPath: Path2D
+    private outPath: Path2D
+    private inPath: Path2D
 
     constructor() {
         this.body = BODIES[1][0]
@@ -59,33 +59,11 @@ export class Pet {
 
         const paths = this.buildPaths()
         this.bodyPath = paths[0]
-        this.partsPath = paths[1]
-        this.clippingPath = paths[2]
+        this.inPath = paths[1]
+        this.outPath = paths[2]
     }
 
-    buildPaths(): Path2D[] {
-        const clipping = new Path2D()
-
-        const ps = this.body.path.split("M")
-        ps.forEach((p) => {
-            const pp = new Path2D("M " +p)
-            clipping.addPath(pp)
-        })
-
-        const bodyparts = [
-            this.mouth,
-            this.leg1,
-            this.leg2,
-            this.arm1,
-            this.arm2,
-            this.eye1,
-            this.eye2
-        ].filter((n) => !!n)
-
-
-        const parts = new Path2D()
-        const points: BodyFrame["points"] = JSON.parse(JSON.stringify(this.body.points))
-        bodyparts.forEach((part) => {
+    pinPart(path: Path2D, points: Point[], part: PartFrame) {
             const index = points.findIndex((po) => po.type === part.type)
             if(index < 0) return
             const anchor = points[index]
@@ -94,20 +72,42 @@ export class Pet {
             translate.translateSelf(anchor?.x, anchor?.y)
             translate.rotateSelf(anchor?.t)
             const subpath = new Path2D(part.path)
-            parts.addPath(subpath, translate)
-        })
+            path.addPath(subpath, translate)
+    }
 
+    buildPaths(): Path2D[] {
+        const points: BodyFrame["points"] = JSON.parse(JSON.stringify(this.body.points))
+        const ins = [
+            this.mouth,
+            this.eye1,
+            this.eye2
+        ].filter((n) => !!n)
 
+        const outs = [
+            this.leg1,
+            this.leg2,
+            this.arm1,
+            this.arm2,
+        ].filter((n) => !!n)
+
+        const inParts = new Path2D()
+        ins.forEach(this.pinPart.bind(this, inParts, points))
+        const outParts = new Path2D()
+        outs.forEach(this.pinPart.bind(this, outParts, points))
         const body = new Path2D(this.body.path);
-
-        return [body, parts, clipping]
+        return [body, inParts, outParts]
     }
 
 
 
     render() {
-        if (!Context || !this.bodyPath || !this.clippingPath || !this.partsPath) return
-        Context.fill(this.clippingPath, "nonzero")
-
+        if (!Context || !this.bodyPath || !this.outPath || !this.inPath) return
+        Context.save()
+        Context.stroke(this.outPath)
+        Context.globalCompositeOperation = "destination-out"
+        Context.fill(this.bodyPath)
+        Context.restore()
+        Context.stroke(this.bodyPath)
+        Context.stroke(this.inPath)
     }
 }
