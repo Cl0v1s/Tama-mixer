@@ -90,6 +90,8 @@ export class Pet {
             this.arm2,
         ].filter((n) => !!n)
 
+        console.log(outs)
+
         const inParts = new Path2D()
         ins.forEach(this.pinPart.bind(this, inParts, points))
         const outParts = new Path2D()
@@ -102,12 +104,18 @@ export class Pet {
 
     render() {
         if (!Context || !this.bodyPath || !this.outPath || !this.inPath) return
+        const transform = new DOMMatrix()
+        transform.scaleSelf(this.zoom, this.zoom)
         Context.save()
+        Context.save()
+        Context.setTransform(transform)
         Context.stroke(this.outPath)
         Context.globalCompositeOperation = "destination-out"
         Context.fill(this.bodyPath)
         Context.restore()
+        Context.setTransform(transform)
         Context.stroke(this.bodyPath)
         Context.stroke(this.inPath)
+        Context.restore()
     }
 }

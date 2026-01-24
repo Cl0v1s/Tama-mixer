@@ -280,13 +280,7 @@ type Command struct {
 
 func (cmd *Command) Transform(t Transformation) {
 	switch cmd.Type {
-	case "M", "L":
-		point := Point{X: cmd.Args[0], Y: cmd.Args[1]}
-		point = point.Translate(t.Translation)
-		point = point.Rotate(t.Rotation)
-		cmd.Args[0] = point.X
-		cmd.Args[1] = point.Y
-	case "C":
+	case "M", "L", "C":
 		for u := 0; u < len(cmd.Args); u += 2 {
 			point := Point{X: cmd.Args[u], Y: cmd.Args[u+1]}
 			point = point.Translate(t.Translation)
@@ -302,6 +296,16 @@ func (cmd *Command) Transform(t Transformation) {
 			cmd.Args[u+5] = point.X
 			cmd.Args[u+6] = point.Y
 		}
+	case "V":
+		point := Point{X: 0, Y: cmd.Args[0]}
+		point = point.Translate(t.Translation)
+		point = point.Rotate(t.Rotation)
+		cmd.Args[0] = point.Y
+	case "H":
+		point := Point{X: cmd.Args[0], Y: 0}
+		point = point.Translate(t.Translation)
+		point = point.Rotate(t.Rotation)
+		cmd.Args[0] = point.X
 	}
 }
 
