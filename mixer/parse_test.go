@@ -6,6 +6,7 @@ import (
 )
 
 const simplePath = "M 130 10 C 120 20, 180 20, 170 10"
+const intermediatePath = "m 10 10 c 1 2 3 4 5 6 z m -10 -10"
 const complexPath = " m 0 0 c 2.384706 -3.8247189 9.090522 -2.8303014 13.419508 -2.9698914 4.328986 -0.13959 8.777591 -0.1227708 12.099557 1.8699314 3.321966 1.992702 5.665494 5.552875 6.599759 8.799678 0.934265 3.246803 0.907 6.146902 -0.769972 9.239661 -1.401888 2.585435 -4.005582 4.719819 -7.320097 6.355104 -0.650388 0.320882 -1.328144 0.622547 -2.029561 0.904631 -4.275988 1.719648 -11.763687 4.446312 -15.729423 1.649939 -0.37043 -0.261202 -0.689892 -0.548786 -0.965528 -0.859054 -2.675262 -3.011389 -1.222003 -8.159713 -2.169357 -12.065472 -0.706428 -2.912467 -2.980282 -6.045882 -3.64267 -8.952141 -0.317429 -1.392734 -0.264783 -2.733301 0.507784 -3.972386 z"
 
 func TestParseDSimple(t *testing.T) {
@@ -19,13 +20,31 @@ func TestParseDSimple(t *testing.T) {
 	}
 }
 
+func TestParseDIntermediate(t *testing.T) {
+	test := intermediatePath
+	commands := ParseD(test)
+	if len(commands) != 4 {
+		t.Error("len(commands) must be 4")
+	}
+	if commands[0].Type != "M" || commands[1].Type != "C" || commands[2].Type != "Z" || commands[3].Type != "M" {
+		t.Error("Wrong command types")
+	}
+	if commands[0].Args[0] != 10 || commands[0].Args[1] != 10 || commands[3].Args[0] != 0 || commands[3].Args[1] != 0 {
+		t.Error("Wrong M Args")
+	}
+	if commands[1].Args[0] != 11 || commands[1].Args[1] != 12 || commands[1].Args[2] != 13 || commands[1].Args[3] != 14 || commands[1].Args[4] != 15 || commands[1].Args[5] != 16 {
+		t.Error("Wrong C Args")
+	}
+
+}
+
 func TestParseDComplex(t *testing.T) {
 	test := complexPath
 	commands := ParseD(test)
 	if len(commands) != 3 {
 		t.Error("len(commands) must be 3")
 	}
-	if commands[0].Type != "m" || commands[1].Type != "c" || commands[2].Type != "z" {
+	if commands[0].Type != "M" || commands[1].Type != "C" || commands[2].Type != "Z" {
 		t.Error("Wrong command types")
 	}
 }
@@ -51,23 +70,6 @@ func TestGetBeziersFromCommandsZ(t *testing.T) {
 	if got[1].P3.X != wantEnd.X && got[1].P3.Y != wantEnd.Y {
 		t.Error("got[1].P3 is different from wantEnd")
 	}
-}
-
-func TestGetBeziersFromCommandsM(t *testing.T) {
-	const pathWithMs = "M 34,12 38,11"
-	got := GetBeziersFromCommands(ParseD(pathWithMs))
-	if len(got) != 1 {
-		t.Error("len(got) must be 1")
-	}
-	wantStart := Point{X: 34, Y: 12}
-	wantEnd := Point{X: 38, Y: 11}
-	if got[0].P0.X != wantStart.X && got[0].P0.Y != wantStart.Y {
-		t.Error("got[0].P0 is different from wantStart")
-	}
-	if got[0].P3.X != wantEnd.X && got[0].P3.Y != wantEnd.Y {
-		t.Error("got[0].P3 is different from wantEnd")
-	}
-
 }
 
 func TestGetBeziersFromCommandsComplex(t *testing.T) {

@@ -265,28 +265,12 @@ func (group Group) Transform(t Transformation) Group {
 	finalPaths := make([]Path, 0)
 	for i := 0; i < len(paths); i++ {
 		commands := ParseD(paths[i].D)
-		beziers := GetBeziersFromCommands(commands)
-		for u := 0; u < len(beziers); u++ {
-			beziers[u].P0 = beziers[u].P0.Translate(t.Translation)
-			beziers[u].P1 = beziers[u].P1.Translate(t.Translation)
-			beziers[u].P2 = beziers[u].P2.Translate(t.Translation)
-			beziers[u].P3 = beziers[u].P3.Translate(t.Translation)
-
-			beziers[u].P0 = beziers[u].P0.Rotate(t.Rotation)
-			beziers[u].P1 = beziers[u].P1.Rotate(t.Rotation)
-			beziers[u].P2 = beziers[u].P2.Rotate(t.Rotation)
-			beziers[u].P3 = beziers[u].P3.Rotate(t.Rotation)
+		for u := 0; u < len(commands); u++ {
+			commands[u].Transform(t)
 		}
-		p := Path{
-			ID:    paths[i].ID,
-			Label: paths[i].Label,
-			Style: paths[i].Style,
-			D:     BeziersToD(beziers),
-		}
-		finalPaths = append(finalPaths, p)
+		finalPaths = append(finalPaths, Path{D: CompileD(commands)})
 	}
 	result.Paths = finalPaths
-
 	return result
 }
 
@@ -310,6 +294,33 @@ type Circle struct {
 type Command struct {
 	Type string
 	Args []float64
+}
+
+func (cmd *Command) Transform(t Transformation) {
+	switch cmd.Type {
+	case "M", "L":
+		point := Point{X: cmd.Args[0], Y: cmd.Args[1]}
+		point = point.Translate(t.Translation)
+		point = point.Rotate(t.Rotation)
+		cmd.Args[0] = point.X
+		cmd.Args[1] = point.Y
+	case "C":
+		for u := 0; u < len(cmd.Args); u += 2 {
+			point := Point{X: cmd.Args[u], Y: cmd.Args[u+1]}
+			point = point.Translate(t.Translation)
+			point = point.Rotate(t.Rotation)
+			cmd.Args[u] = point.X
+			cmd.Args[u+1] = point.Y
+		}
+	case "A":
+		for u := 0; u < len(cmd.Args); u += 7 {
+			point := Point{X: cmd.Args[u+5], Y: cmd.Args[u+6]}
+			point = point.Translate(t.Translation)
+			point = point.Rotate(t.Rotation)
+			cmd.Args[u+5] = point.X
+			cmd.Args[u+6] = point.Y
+		}
+	}
 }
 
 type Path struct {

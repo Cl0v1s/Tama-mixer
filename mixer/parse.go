@@ -29,7 +29,20 @@ func findClosestPointInPaths(paths []Path, point Point, rng float64) (float64, B
 	return -1, Bezier{}
 }
 
+func CompileD(commands []Command) string {
+	results := make([]string, 0)
+	for _, command := range commands {
+		args := make([]string, 0)
+		for _, arg := range command.Args {
+			args = append(args, strconv.FormatFloat(arg, 'f', 2, 64))
+		}
+		results = append(results, command.Type+" "+strings.Join(args, ","))
+	}
+	return strings.Join(results, " ")
+}
+
 func ParseD(d string) []Command {
+	// parsing path string to commands array
 	var currentCmd *Command = nil
 	commands := make([]Command, 0)
 	buffer := make([]rune, 0)
@@ -73,6 +86,56 @@ func ParseD(d string) []Command {
 		commands = append(commands, *currentCmd)
 	}
 
+	// converting relative commands to absolute ones
+	current := Point{}
+	var zPoint *Point
+	for i := 0; i < len(commands); i++ {
+		switch commands[i].Type {
+		case "M", "m", "L", "l":
+			for u := 0; u < len(commands[i].Args); u += 2 {
+				x, y := commands[i].Args[u], commands[i].Args[u+1]
+				if commands[i].Type == "m" || commands[i].Type == "l" {
+					x += current.X
+					y += current.Y
+				}
+				commands[i].Args[u] = x
+				commands[i].Args[u+1] = y
+				current = Point{X: x, Y: y}
+				if zPoint == nil {
+					zPoint = &Point{X: x, Y: y}
+				}
+			}
+		case "C", "c":
+			for u := 0; u < len(commands[i].Args); u += 6 {
+				if commands[i].Type == "c" {
+					for v := 0; v < 6; v += 2 {
+						commands[i].Args[u+v] += current.X
+						commands[i].Args[u+v+1] += current.Y
+					}
+				}
+				current = Point{X: commands[i].Args[u+4], Y: commands[i].Args[u+5]}
+			}
+		case "A", "a":
+			for u := 0; u < len(commands[i].Args); u += 7 {
+				x := commands[i].Args[u+5]
+				y := commands[i].Args[u+6]
+				if commands[i].Type == "a" {
+					x += current.X
+					y += current.Y
+
+					commands[i].Args[u+5] = x
+					commands[i].Args[u+6] = y
+				}
+				current = Point{X: x, Y: y}
+			}
+		case "Z", "z":
+			if zPoint != nil {
+				current = *zPoint
+			}
+			zPoint = nil
+		}
+		commands[i].Type = strings.ToUpper(commands[i].Type)
+	}
 	return commands
 }
 
@@ -330,23 +393,6 @@ func RetrievePoints(group *Group, rootLabel string) ([]Point, Point) {
 		}
 	}
 	group.Circles = group.Circles[:i]
-	i = 0
-	for _, p := range group.Paths {
-		if p.Label == rootLabel {
-			group.Paths[i] = p
-			i++
-		} else {
-			commands := ParseD(p.D)
-			index := slices.IndexFunc(commands, func(c Command) bool {
-				return strings.ToLower(c.Type) == "m"
-			})
-			if index == -1 {
-				continue
-			}
-			points = append(points, Point{X: commands[index].Args[0], Y: commands[index].Args[1], Type: BodypartType(p.Label)})
-		}
-	}
-	group.Paths = group.Paths[:i]
 
 	// get barycentre from anchor points
 	baryCentre := Point{X: 0, Y: 0}
