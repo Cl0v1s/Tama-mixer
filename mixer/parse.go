@@ -33,10 +33,33 @@ func CompileD(commands []Command) string {
 	results := make([]string, 0)
 	for _, command := range commands {
 		args := make([]string, 0)
-		for _, arg := range command.Args {
-			args = append(args, strconv.FormatFloat(arg, 'f', 2, 64))
+		if command.Type == "A" || command.Type == "a" {
+			for i := 0; i < len(command.Args); i += 7 {
+				rx := strconv.FormatFloat(command.Args[i], 'f', 8, 64)
+				ry := strconv.FormatFloat(command.Args[i+1], 'f', 8, 64)
+				rotation := strconv.FormatFloat(command.Args[i+2], 'f', 8, 64)
+
+				// Flags : large-arc et sweep, forcés à 0 ou 1
+				largeArcFlag := "0"
+				if command.Args[i+3] != 0 {
+					largeArcFlag = "1"
+				}
+				sweepFlag := "0"
+				if command.Args[i+4] != 0 {
+					sweepFlag = "1"
+				}
+
+				x := strconv.FormatFloat(command.Args[i+5], 'f', 8, 64)
+				y := strconv.FormatFloat(command.Args[i+6], 'f', 8, 64)
+
+				args = append(args, rx, ry, rotation, largeArcFlag, sweepFlag, x, y)
+			}
+		} else {
+			for _, arg := range command.Args {
+				args = append(args, strconv.FormatFloat(arg, 'f', 8, 64))
+			}
 		}
-		results = append(results, command.Type+" "+strings.Join(args, ","))
+		results = append(results, command.Type+" "+strings.Join(args, " "))
 	}
 	return strings.Join(results, " ")
 }
@@ -89,53 +112,72 @@ func ParseD(d string) []Command {
 	// converting relative commands to absolute ones
 	current := Point{}
 	var zPoint *Point
-	for i := 0; i < len(commands); i++ {
-		switch commands[i].Type {
-		case "M", "m", "L", "l":
-			for u := 0; u < len(commands[i].Args); u += 2 {
-				x, y := commands[i].Args[u], commands[i].Args[u+1]
-				if commands[i].Type == "m" || commands[i].Type == "l" {
-					x += current.X
-					y += current.Y
-				}
-				commands[i].Args[u] = x
-				commands[i].Args[u+1] = y
-				current = Point{X: x, Y: y}
-				if zPoint == nil {
-					zPoint = &Point{X: x, Y: y}
-				}
-			}
-		case "C", "c":
-			for u := 0; u < len(commands[i].Args); u += 6 {
-				if commands[i].Type == "c" {
-					for v := 0; v < 6; v += 2 {
-						commands[i].Args[u+v] += current.X
-						commands[i].Args[u+v+1] += current.Y
-					}
-				}
-				current = Point{X: commands[i].Args[u+4], Y: commands[i].Args[u+5]}
-			}
-		case "A", "a":
-			for u := 0; u < len(commands[i].Args); u += 7 {
-				x := commands[i].Args[u+5]
-				y := commands[i].Args[u+6]
-				if commands[i].Type == "a" {
-					x += current.X
-					y += current.Y
 
-					commands[i].Args[u+5] = x
-					commands[i].Args[u+6] = y
+	for i := 0; i < len(commands); i++ {
+		cmd := &commands[i]
+		switch cmd.Type {
+		case "M", "m", "L", "l":
+			for u := 0; u < len(cmd.Args); u += 2 {
+				x, y := cmd.Args[u], cmd.Args[u+1]
+				if cmd.Type == "m" || cmd.Type == "l" {
+					x += current.X
+					y += current.Y
 				}
+				cmd.Args[u], cmd.Args[u+1] = x, y
 				current = Point{X: x, Y: y}
 			}
+			// point de fermeture pour 'Z'
+			zPoint = &Point{X: current.X, Y: current.Y}
+
+		case "C", "c":
+			for u := 0; u < len(cmd.Args); u += 6 {
+				if cmd.Type == "c" {
+					cmd.Args[u] += current.X
+					cmd.Args[u+1] += current.Y
+					cmd.Args[u+2] += current.X
+					cmd.Args[u+3] += current.Y
+					cmd.Args[u+4] += current.X
+					cmd.Args[u+5] += current.Y
+				}
+				current = Point{X: cmd.Args[u+4], Y: cmd.Args[u+5]}
+			}
+
+		case "A", "a":
+			for u := 0; u < len(cmd.Args); u += 7 {
+				if cmd.Type == "a" {
+					// seule la position finale du point change
+					cmd.Args[u+5] += current.X
+					cmd.Args[u+6] += current.Y
+				}
+				current = Point{X: cmd.Args[u+5], Y: cmd.Args[u+6]}
+			}
+
+		case "H", "h": // ligne horizontale
+			for u := 0; u < len(cmd.Args); u++ {
+				if cmd.Type == "h" {
+					cmd.Args[u] += current.X
+				}
+				current.X = cmd.Args[u]
+			}
+
+		case "V", "v": // ligne verticale
+			for u := 0; u < len(cmd.Args); u++ {
+				if cmd.Type == "v" {
+					cmd.Args[u] += current.Y
+				}
+				current.Y = cmd.Args[u]
+			}
+
 		case "Z", "z":
 			if zPoint != nil {
 				current = *zPoint
 			}
 			zPoint = nil
 		}
-		commands[i].Type = strings.ToUpper(commands[i].Type)
+
+		cmd.Type = strings.ToUpper(cmd.Type)
 	}
+
 	return commands
 }
 

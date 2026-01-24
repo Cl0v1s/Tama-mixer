@@ -35,7 +35,6 @@ func TestParseDIntermediate(t *testing.T) {
 	if commands[1].Args[0] != 11 || commands[1].Args[1] != 12 || commands[1].Args[2] != 13 || commands[1].Args[3] != 14 || commands[1].Args[4] != 15 || commands[1].Args[5] != 16 {
 		t.Error("Wrong C Args")
 	}
-
 }
 
 func TestParseDComplex(t *testing.T) {

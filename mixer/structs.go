@@ -201,25 +201,7 @@ func (group Group) GetPath() Path {
 	paths := GetPathsInGroup(group)
 	resultCmds := make([]string, 0)
 	for _, path := range paths {
-		cmds := ParseD(path.D)
-		if cmds[0].Type != "M" {
-			x := 0.0
-			y := 0.0
-			if len(cmds[0].Args) >= 1 {
-				x += cmds[0].Args[0]
-			}
-			if len(cmds[0].Args) >= 2 {
-				y += cmds[0].Args[1]
-			}
-			resultCmds = append(resultCmds, "M "+strconv.FormatFloat(x, 'f', 2, 64)+","+strconv.FormatFloat(y, 'f', 2, 64))
-		}
-		for _, cmd := range cmds {
-			args := make([]string, 0)
-			for _, a := range cmd.Args {
-				args = append(args, strconv.FormatFloat(a, 'f', 2, 64))
-			}
-			resultCmds = append(resultCmds, cmd.Type+" "+strings.Join(args, ","))
-		}
+		resultCmds = append(resultCmds, path.D)
 	}
 	return Path{
 		D: strings.Join(resultCmds, " "),
