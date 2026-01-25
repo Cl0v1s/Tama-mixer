@@ -13,106 +13,228 @@ export async function LoadBodies() {
 let BODYPARTS: PartFrame[][] = []
 export async function LoadBodyparts() {
     const promises = Object.values(import.meta.glob('./../../mixer/out/bodyparts/*.json')).map((m: any) => m().then((m: any) => m.default))
-    BODYPARTS = await Promise.all(promises)
+    BODYPARTS = (await Promise.all(promises)).map((a: PartFrame[]) => a.sort((a, b) => a.frame - b.frame))
+}
+
+function getBody() {
+    return BODIES[Math.floor(Math.random() * BODIES.length)]
 }
 
 
-function getPart(type: string): PartFrame {
-    const parts = BODYPARTS.map((o) => o[0]).filter((o) => o.type === type)
+function getPart(type: string): PartFrame[] {
+    const parts = BODYPARTS.filter((o) => o[0].type === type)
     return parts[Math.floor(Math.random() * parts.length)]
 }
 
-function getOtherPart(part: PartFrame): PartFrame {
-    const parts = BODYPARTS.map((o) => o[0]).filter((o) => o.type !== part.type)
-    return parts.find((p) => p.name === part.name)!
+function getOtherPart(part: PartFrame[]): PartFrame[] {
+    const parts = BODYPARTS.filter((o) => o[0].type !== part[0].type)
+    return parts.find((p) => p[0].name === part[0].name)!
 }
+
+enum PetAnimationState {
+    IDLE,
+    EATING,
+    WALKING
+}
+
+type BodyPart = "mouth" | "leg1" | "leg2" | "arm1" | "arm2" | "eye1" | "eye2"
+
+type AnimationConfig = {
+    /**
+     * Moving parts in this animations
+     */
+    parts: Array<BodyPart>;   
+    /**
+     * 1 = every tick, 4 = every 4 tick etc...
+     */
+    speed: number;                      
+    /**
+     * Does animation loops
+     */
+    loop: boolean;
+    /**
+     * Does animation allow animated body
+     */
+    body: boolean
+};
+
+const ANIMATIONS: Record<PetAnimationState, AnimationConfig> = {
+    [PetAnimationState.IDLE]: {
+        parts: [],                       
+        speed: 1,
+        loop: true,
+        body: true
+    },
+    [PetAnimationState.WALKING]: {
+        parts: ['leg1', 'leg2', 'arm1', 'arm2'],
+        speed: 20,
+        loop: true,
+        body: true
+    },
+    [PetAnimationState.EATING]: {
+        parts: ['mouth'],
+        speed: 20,
+        loop: true,
+        body: false
+    }
+};
 
 export class Pet {
 
+    private bodys: BodyFrame[]
     private body: BodyFrame;
+    private mouths: PartFrame[]
     public mouth: PartFrame;
+    private leg1s: PartFrame[]
     public leg1: PartFrame;
+    private leg2s: PartFrame[]
     public leg2: PartFrame;
+    private arm1s: PartFrame[]
     public arm1: PartFrame;
+    private arm2s: PartFrame[]
     public arm2: PartFrame;
+    private eye1s: PartFrame[]
+    private eye2s: PartFrame[]
     public eye1: PartFrame;
     public eye2: PartFrame;
 
-    public zoom = 3;
+    /**
+     * Speed of body frame change
+     */
+    public bodySpeed = 100
+    /** 
+     * Level of zoom
+     */
+    public zoom = 5;
     public x = 10;
     public y = 10;
 
-    private bodyPath: Path2D
-    private outPath: Path2D
-    private inPath: Path2D
+    /**
+     * Currently playing animation
+     */
+    public animationState: PetAnimationState = PetAnimationState.IDLE
+
+    private bodyPath!: Path2D
+    private outPath!: Path2D
+    private inPath!: Path2D
 
     constructor() {
-        this.body = BODIES[1][0]
+        this.bodys = getBody()
+        this.body = this.bodys[0]
 
-        this.mouth = getPart("mouth")
-        this.leg1 = getPart("leg1")
-        this.leg2 = getOtherPart(this.leg1)
-        this.arm1 = getPart("arm1")
-        this.arm2 = getOtherPart(this.arm1)
-        this.eye1 = getPart("eye")
-        this.eye2 = this.eye1
+        this.mouths = getPart("mouth")
+        this.mouth = this.mouths[0]
+        this.leg1s = getPart("leg1")
+        this.leg1 = this.leg1s[0]
+        this.leg2s = getOtherPart(this.leg1s)
+        this.leg2 = this.leg2s[0]
+        this.arm1s = getPart("arm1")
+        this.arm1 = this.arm1s[0]
+        this.arm2s = getOtherPart(this.arm1s)
+        this.arm2 = this.arm2s[0]
+        this.eye1s = getPart("eye")
+        this.eye2s = this.eye1s
+        this.eye1 = this.eye1s[0]
+        this.eye2 = this.eye2s[0]
 
-        const paths = this.buildPaths()
-        this.bodyPath = paths[0]
-        this.inPath = paths[1]
-        this.outPath = paths[2]
+        console.log(this)
+
+        this.buildPaths()
     }
 
-    pinPart(path: Path2D, points: Point[], part: PartFrame) {
-            const index = points.findIndex((po) => po.type === part.type)
-            if(index < 0) return
-            const anchor = points[index]
-            points.splice(index, 1)
-            const translate = new DOMMatrix()
-            translate.translateSelf(anchor?.x, anchor?.y)
-            translate.rotateSelf(anchor?.t)
-            const subpath = new Path2D(part.path)
-            path.addPath(subpath, translate)
+    private pinPart(path: Path2D, points: Point[], part: PartFrame) {
+        const index = points.findIndex((po) => po.type === part.type)
+        if (index < 0) return
+        const anchor = points[index]
+        points.splice(index, 1)
+        const translate = new DOMMatrix()
+        translate.translateSelf(anchor?.x, anchor?.y)
+        translate.rotateSelf(anchor?.t)
+        const subpath = new Path2D(part.path)
+        path.addPath(subpath, translate)
     }
 
-    buildPaths(): Path2D[] {
+    private buildPaths() {
         const points: BodyFrame["points"] = JSON.parse(JSON.stringify(this.body.points))
         const ins = [
             this.mouth,
             this.eye1,
             this.eye2
         ].filter((n) => !!n)
-
         const outs = [
             this.leg1,
             this.leg2,
             this.arm1,
             this.arm2,
         ].filter((n) => !!n)
-
-        console.log(outs)
-
         const inParts = new Path2D()
         ins.forEach(this.pinPart.bind(this, inParts, points))
         const outParts = new Path2D()
         outs.forEach(this.pinPart.bind(this, outParts, points))
         const body = new Path2D(this.body.path);
-        return [body, inParts, outParts]
+
+        this.bodyPath = body
+        this.inPath = inParts
+        this.outPath = outParts
     }
 
+    private frameCounter = 0;
 
+    private animate() {
+        this.frameCounter = (this.frameCounter + 1);
+
+
+        const anim = ANIMATIONS[this.animationState];
+        if(!anim) return
+
+        let needRebuild = false;
+
+        if(anim.body && this.frameCounter % this.bodySpeed === 0) {
+            this.body = this.bodys[(this.body.frame + 1) % this.bodys.length]
+            needRebuild = true
+        }
+
+        if (anim && anim.parts.length > 0 && this.frameCounter % anim.speed === 0) {
+
+            for (let partName of anim.parts) {
+                const frames = this[`${partName}s`] as PartFrame[];
+                const current = this[partName as keyof Pet] as PartFrame;
+
+                let nextIdx = current.frame + 1;
+                if (nextIdx >= frames.length) {
+                    nextIdx = anim.loop ? 0 : frames.length - 1;
+                    if (!anim.loop) {
+                        this.animationState = PetAnimationState.IDLE;
+                    }
+                }
+
+                if (this[partName as keyof Pet] !== frames[nextIdx]) {
+                    (this[partName as keyof Pet] as any) = frames[nextIdx];
+                    needRebuild = true;
+                }
+            }
+        }
+        if (needRebuild) {
+            this.buildPaths();
+        }
+    }
 
     render() {
         if (!Context || !this.bodyPath || !this.outPath || !this.inPath) return
         const transform = new DOMMatrix()
         transform.scaleSelf(this.zoom, this.zoom)
+
+        this.animate()
+
         Context.save()
         Context.save()
         Context.setTransform(transform)
+        Context.lineWidth = 0.5
         Context.stroke(this.outPath)
         Context.globalCompositeOperation = "destination-out"
         Context.fill(this.bodyPath)
         Context.restore()
+        Context.lineWidth = 0.5
         Context.setTransform(transform)
         Context.stroke(this.bodyPath)
         Context.stroke(this.inPath)

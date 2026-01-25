@@ -1,2 +1,2 @@
-const canvas = document.querySelector("canvas");
-export const Context = canvas?.getContext("2d");
+export const Canvas = document.querySelector("canvas");
+export const Context = Canvas?.getContext("2d");
