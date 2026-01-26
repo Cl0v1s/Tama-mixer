@@ -21,8 +21,8 @@ function getBody() {
 }
 
 
-function getPart(type: string): PartFrame[] {
-    const parts = BODYPARTS.filter((o) => o[0].type === type)
+function getPart(type: string, dont: string[] = []): PartFrame[] {
+    const parts = BODYPARTS.filter((o) => o[0].type === type && dont.indexOf(o[0].name) === -1)
     return parts[Math.floor(Math.random() * parts.length)]
 }
 
@@ -30,6 +30,7 @@ function getOtherPart(part: PartFrame[]): PartFrame[] {
     const parts = BODYPARTS.filter((o) => o[0].type !== part[0].type)
     return parts.find((p) => p[0].name === part[0].name)!
 }
+
 
 enum PetAnimationState {
     IDLE,
@@ -43,11 +44,11 @@ type AnimationConfig = {
     /**
      * Moving parts in this animations
      */
-    parts: Array<BodyPart>;   
+    parts: Array<BodyPart>;
     /**
      * 1 = every tick, 4 = every 4 tick etc...
      */
-    speed: number;                      
+    speed: number;
     /**
      * Does animation loops
      */
@@ -60,7 +61,7 @@ type AnimationConfig = {
 
 const ANIMATIONS: Record<PetAnimationState, AnimationConfig> = {
     [PetAnimationState.IDLE]: {
-        parts: [],                       
+        parts: [],
         speed: 1,
         loop: true,
         body: true
@@ -78,6 +79,23 @@ const ANIMATIONS: Record<PetAnimationState, AnimationConfig> = {
         body: false
     }
 };
+
+
+/**
+ * Number of tick blinking
+ */
+const BLINK_DURATION = 10
+
+/**
+ * Number of ticks before another blinking can occure 
+ */
+const BLINK_COOLDOWN = 300
+
+/**
+ * 1/BLINK_PROBABILITY chance to blink per tick 
+ */
+const BLINK_PROBABILITY = 100
+
 
 export class Pet {
 
@@ -98,25 +116,33 @@ export class Pet {
     public eye1: PartFrame;
     public eye2: PartFrame;
 
+    public colors = ["#004990", "#f7c8dd", "#a1d6dd"]
+
     /**
      * Speed of body frame change
      */
     public bodySpeed = 100
+    /**
+     * negative = blinking cooldown / positive = blinking 
+     */
+    public blink = 0
     /** 
      * Level of zoom
      */
-    public zoom = 5;
+    public zoom = 2;
     public x = 10;
     public y = 10;
 
     /**
      * Currently playing animation
      */
-    public animationState: PetAnimationState = PetAnimationState.IDLE
+    public animationState: PetAnimationState = PetAnimationState.WALKING
 
     private bodyPath!: Path2D
     private outPath!: Path2D
     private inPath!: Path2D
+
+    private static CLOSED_EYE_FRAME: PartFrame;
 
     constructor() {
         this.bodys = getBody()
@@ -132,7 +158,7 @@ export class Pet {
         this.arm1 = this.arm1s[0]
         this.arm2s = getOtherPart(this.arm1s)
         this.arm2 = this.arm2s[0]
-        this.eye1s = getPart("eye")
+        this.eye1s = getPart("eye", ["CLOSED"])
         this.eye2s = this.eye1s
         this.eye1 = this.eye1s[0]
         this.eye2 = this.eye2s[0]
@@ -140,6 +166,8 @@ export class Pet {
         console.log(this)
 
         this.buildPaths()
+
+        Pet.CLOSED_EYE_FRAME = BODYPARTS.find((d) => d[0].name === "CLOSED")![0]
     }
 
     private pinPart(path: Path2D, points: Point[], part: PartFrame) {
@@ -183,19 +211,18 @@ export class Pet {
     private animate() {
         this.frameCounter = (this.frameCounter + 1);
 
-
         const anim = ANIMATIONS[this.animationState];
-        if(!anim) return
+        if (!anim) return
 
         let needRebuild = false;
 
-        if(anim.body && this.frameCounter % this.bodySpeed === 0) {
+        // animate body
+        if (anim.body && this.frameCounter % this.bodySpeed === 0) {
             this.body = this.bodys[(this.body.frame + 1) % this.bodys.length]
             needRebuild = true
         }
 
         if (anim && anim.parts.length > 0 && this.frameCounter % anim.speed === 0) {
-
             for (let partName of anim.parts) {
                 const frames = this[`${partName}s`] as PartFrame[];
                 const current = this[partName as keyof Pet] as PartFrame;
@@ -208,12 +235,39 @@ export class Pet {
                     }
                 }
 
-                if (this[partName as keyof Pet] !== frames[nextIdx]) {
-                    (this[partName as keyof Pet] as any) = frames[nextIdx];
+                let nextFrame = frames[nextIdx]
+
+                if (this[partName as keyof Pet] !== nextFrame) {
+                    (this[partName as keyof Pet] as any) = nextFrame;
                     needRebuild = true;
                 }
             }
         }
+
+        // blinking management 
+        if(this.blink > 0) {
+            this.blink--
+            if(this.blink === 1) {
+                needRebuild = true
+                this.blink = BLINK_COOLDOWN * -1
+            }
+        }
+        if(this.blink < 0) this.blink++
+        if (this.blink == 0 && Math.floor(Math.random() * BLINK_PROBABILITY) === 0) {
+            this.blink = BLINK_DURATION
+            needRebuild = true
+        } 
+        if(needRebuild) {
+            if(this.blink > 0) {
+                this.eye1 = Pet.CLOSED_EYE_FRAME
+                this.eye2 = Pet.CLOSED_EYE_FRAME
+            } else if(this.blink < 0) {
+                this.eye1 = this.eye1s[0]
+                this.eye2 = this.eye2s[0]
+            }
+        }
+
+
         if (needRebuild) {
             this.buildPaths();
         }
@@ -223,19 +277,30 @@ export class Pet {
         if (!Context || !this.bodyPath || !this.outPath || !this.inPath) return
         const transform = new DOMMatrix()
         transform.scaleSelf(this.zoom, this.zoom)
+        transform.translateSelf(this.x, this.y)
 
         this.animate()
+
+
 
         Context.save()
         Context.save()
         Context.setTransform(transform)
-        Context.lineWidth = 0.5
+        Context.fillStyle = "red"
+        Context.fillRect(0, 0, this.body.size.x, this.body.size.y);
+        Context.lineWidth = 1
+        Context.fillStyle = this.colors[2]
+        Context.fill(this.outPath)
+        Context.strokeStyle = this.colors[0]
         Context.stroke(this.outPath)
         Context.globalCompositeOperation = "destination-out"
         Context.fill(this.bodyPath)
         Context.restore()
-        Context.lineWidth = 0.5
         Context.setTransform(transform)
+        Context.fillStyle = this.colors[1]
+        Context.fill(this.bodyPath)
+        Context.lineWidth = 1
+        Context.strokeStyle = this.colors[0]
         Context.stroke(this.bodyPath)
         Context.stroke(this.inPath)
         Context.restore()
