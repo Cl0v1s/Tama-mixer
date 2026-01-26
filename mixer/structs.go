@@ -144,6 +144,7 @@ type BodyPart struct {
 	Type  BodypartType `json:"type"`
 	Frame int          `json:"frame"`
 	Name  string       `json:"name"`
+	Size  Point        `json:"size"`
 }
 
 type SVG struct {
@@ -314,4 +315,22 @@ type Path struct {
 	Label string `xml:"label,attr"`
 	D     string `xml:"d,attr"`
 	Style string `xml:"style,attr"`
+}
+
+func (path *Path) GetSize() Point {
+	cmds := ParseD(path.D)
+	bzs := GetBeziersFromCommands(cmds)
+	size := Point{}
+	for _, bz := range bzs {
+		for i := 0.0; i <= 1.0; i += 0.05 {
+			point := GetPointFromBezier(bz, i)
+			if point.X > size.X {
+				size.X = point.X
+			}
+			if point.Y > size.Y {
+				size.Y = point.Y
+			}
+		}
+	}
+	return size
 }

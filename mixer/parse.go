@@ -609,6 +609,9 @@ func parseBodypart(g Group) BodyPart {
 	if group.Label != "eye" && group.Label != "mouth" {
 		group = GroupNormalizeRotation(group)
 	}
+	path := group.GetPath()
+	size := path.GetSize()
+
 	frameReg := regexp.MustCompile("(.+)-([0-9]+)")
 	matches := frameReg.FindStringSubmatch(group.ID)
 	if len(matches) < 3 {
@@ -619,7 +622,8 @@ func parseBodypart(g Group) BodyPart {
 		panic(err)
 	}
 	return BodyPart{
-		Path:  group.GetPath().D,
+		Size:  size,
+		Path:  path.D,
 		Type:  BodypartType(group.Label),
 		Frame: int(frame),
 		Name:  matches[1],

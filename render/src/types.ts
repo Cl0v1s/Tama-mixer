@@ -5,6 +5,13 @@ export type Point = {
     type?: string
 }
 
+export type Rect = {
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+}
+
 export type BodyFrame = {
     path: string,
     points: Point[],
@@ -17,5 +24,6 @@ export type PartFrame = {
     path: string,
     type: string,
     frame: number,
-    name: string
+    name: string,
+    size: Point
 }

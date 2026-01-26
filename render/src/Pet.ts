@@ -1,7 +1,7 @@
 import Eggplant from './../../mixer/out/bodies/eggplant.json'
 import PeanutMouth from './../../mixer/out/bodyparts/mouth-peanutmouth.json'
 import { Context } from './Canvas'
-import { BodyFrame, PartFrame, Point } from './types'
+import { BodyFrame, PartFrame, Point, Rect } from './types'
 
 
 let BODIES: BodyFrame[][] = []
@@ -118,6 +118,8 @@ export class Pet {
 
     public colors = ["#004990", "#f7c8dd", "#a1d6dd"]
 
+
+    public boundingBox!: Rect;
     /**
      * Speed of body frame change
      */
@@ -170,19 +172,67 @@ export class Pet {
         Pet.CLOSED_EYE_FRAME = BODYPARTS.find((d) => d[0].name === "CLOSED")![0]
     }
 
-    private pinPart(path: Path2D, points: Point[], part: PartFrame) {
-        const index = points.findIndex((po) => po.type === part.type)
-        if (index < 0) return
-        const anchor = points[index]
-        points.splice(index, 1)
-        const translate = new DOMMatrix()
-        translate.translateSelf(anchor?.x, anchor?.y)
-        translate.rotateSelf(anchor?.t)
-        const subpath = new Path2D(part.path)
-        path.addPath(subpath, translate)
+    private pinPart(path: Path2D, points: Point[], part: PartFrame): Rect {
+        const index = points.findIndex((po) => po.type === part.type);
+        if (index < 0) {
+            return { x: 0, y: 0, width: 0, height: 0 };
+        }
+
+        const anchor = points[index];
+        points.splice(index, 1);
+
+        // Matrice de transformation : translation + rotation autour de l'ancre
+        const matrix = new DOMMatrix();
+        matrix.translateSelf(anchor.x, anchor.y);
+        matrix.rotateSelf(anchor.t);           // rotation en degrés
+
+        // Ajout du sous-chemin avec la transformation
+        const subpath = new Path2D(part.path);
+        path.addPath(subpath, matrix);
+
+        // ───────────────────────────────────────────────
+        // Calcul du rectangle aligné avec la rotation
+        // ───────────────────────────────────────────────
+
+        // 1. Les 4 coins du rectangle local (avant rotation)
+        const hw = part.size.x / 2;
+        const hh = part.size.y / 2;
+
+        const localCorners = [
+            { x: -hw, y: -hh },  // haut-gauche
+            { x: hw, y: -hh },  // haut-droite
+            { x: hw, y: hh },  // bas-droite
+            { x: -hw, y: hh },  // bas-gauche
+        ];
+
+        // 2. Transformation de chaque coin
+        const transformed: DOMPoint[] = localCorners.map(p => {
+            return new DOMPoint(p.x, p.y).matrixTransform(matrix);
+        });
+
+        // 3. Bounding box axis-aligned (AABB) englobant le rectangle tourné
+        let minX = Infinity, minY = Infinity;
+        let maxX = -Infinity, maxY = -Infinity;
+
+        for (const pt of transformed) {
+            minX = Math.min(minX, pt.x);
+            minY = Math.min(minY, pt.y);
+            maxX = Math.max(maxX, pt.x);
+            maxY = Math.max(maxY, pt.y);
+        }
+
+        const rect: Rect = {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
+
+        return rect;
     }
 
     private buildPaths() {
+        let boxes: Rect[] = []
         const points: BodyFrame["points"] = JSON.parse(JSON.stringify(this.body.points))
         const ins = [
             this.mouth,
@@ -196,14 +246,26 @@ export class Pet {
             this.arm2,
         ].filter((n) => !!n)
         const inParts = new Path2D()
-        ins.forEach(this.pinPart.bind(this, inParts, points))
+        boxes = [...boxes, ...ins.map(this.pinPart.bind(this, inParts, points))]
         const outParts = new Path2D()
-        outs.forEach(this.pinPart.bind(this, outParts, points))
+        boxes = [...boxes, ...outs.map(this.pinPart.bind(this, outParts, points))]
         const body = new Path2D(this.body.path);
-
         this.bodyPath = body
         this.inPath = inParts
         this.outPath = outParts
+
+        const box = { 
+            x: this.x,
+            y: this.y,
+            width: this.body.size.x,
+            height: this.body.size.y
+        }
+        boxes.forEach((b) => {
+            if
+        })
+
+
+        console.log(box)
     }
 
     private frameCounter = 0;
@@ -245,23 +307,23 @@ export class Pet {
         }
 
         // blinking management 
-        if(this.blink > 0) {
+        if (this.blink > 0) {
             this.blink--
-            if(this.blink === 1) {
+            if (this.blink === 1) {
                 needRebuild = true
                 this.blink = BLINK_COOLDOWN * -1
             }
         }
-        if(this.blink < 0) this.blink++
+        if (this.blink < 0) this.blink++
         if (this.blink == 0 && Math.floor(Math.random() * BLINK_PROBABILITY) === 0) {
             this.blink = BLINK_DURATION
             needRebuild = true
-        } 
-        if(needRebuild) {
-            if(this.blink > 0) {
+        }
+        if (needRebuild) {
+            if (this.blink > 0) {
                 this.eye1 = Pet.CLOSED_EYE_FRAME
                 this.eye2 = Pet.CLOSED_EYE_FRAME
-            } else if(this.blink < 0) {
+            } else if (this.blink < 0) {
                 this.eye1 = this.eye1s[0]
                 this.eye2 = this.eye2s[0]
             }
@@ -302,6 +364,8 @@ export class Pet {
         Context.lineWidth = 1
         Context.strokeStyle = this.colors[0]
         Context.stroke(this.bodyPath)
+        Context.fillStyle = this.colors[2]
+        Context.fill(this.inPath)
         Context.stroke(this.inPath)
         Context.restore()
     }
