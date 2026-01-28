@@ -25,5 +25,8 @@ export type PartFrame = {
     type: string,
     frame: number,
     name: string,
-    size: Point
+    boundingBox: {
+        topLeft: Point,
+        bottomRight: Point
+    }
 }

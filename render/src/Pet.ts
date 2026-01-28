@@ -54,9 +54,9 @@ type AnimationConfig = {
      */
     loop: boolean;
     /**
-     * Does animation allow animated body
+     * Does animation allow animated body 0 -> no
      */
-    body: boolean
+    body: number
 };
 
 const ANIMATIONS: Record<PetAnimationState, AnimationConfig> = {
@@ -64,19 +64,19 @@ const ANIMATIONS: Record<PetAnimationState, AnimationConfig> = {
         parts: [],
         speed: 1,
         loop: true,
-        body: true
+        body: 100,
     },
     [PetAnimationState.WALKING]: {
         parts: ['leg1', 'leg2', 'arm1', 'arm2'],
         speed: 20,
         loop: true,
-        body: true
+        body: 50
     },
     [PetAnimationState.EATING]: {
         parts: ['mouth'],
         speed: 20,
         loop: true,
-        body: false
+        body: 0
     }
 };
 
@@ -120,10 +120,6 @@ export class Pet {
 
 
     public boundingBox!: Rect;
-    /**
-     * Speed of body frame change
-     */
-    public bodySpeed = 100
     /**
      * negative = blinking cooldown / positive = blinking 
      */
@@ -190,45 +186,26 @@ export class Pet {
         const subpath = new Path2D(part.path);
         path.addPath(subpath, matrix);
 
-        // ───────────────────────────────────────────────
-        // Calcul du rectangle aligné avec la rotation
-        // ───────────────────────────────────────────────
+        const radians = anchor.t * (Math.PI / 180)
+        const bounds = [part.boundingBox.topLeft, { x: part.boundingBox.bottomRight.x, y: part.boundingBox.topLeft.y }, part.boundingBox.bottomRight, { x: part.boundingBox.topLeft.x, y: part.boundingBox.bottomRight.y }]
+            .map((point) => ({ ...point, x: point.x * Math.cos(radians) - point.y * Math.sin(radians), y: point.x * Math.sin(radians) + point.y * Math.cos(radians) } as Point))
+            .map((point) => ({ ...point, x: point.x + anchor.x, y: point.y + anchor.y } as Point)) // translate 
+            .reduce(
+                (acc, p) => ({
+                    minX: Math.min(acc.minX, p.x),
+                    minY: Math.min(acc.minY, p.y),
+                    maxX: Math.max(acc.maxX, p.x),
+                    maxY: Math.max(acc.maxY, p.y),
+                }),
+                { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+            );
 
-        // 1. Les 4 coins du rectangle local (avant rotation)
-        const hw = part.size.x / 2;
-        const hh = part.size.y / 2;
-
-        const localCorners = [
-            { x: -hw, y: -hh },  // haut-gauche
-            { x: hw, y: -hh },  // haut-droite
-            { x: hw, y: hh },  // bas-droite
-            { x: -hw, y: hh },  // bas-gauche
-        ];
-
-        // 2. Transformation de chaque coin
-        const transformed: DOMPoint[] = localCorners.map(p => {
-            return new DOMPoint(p.x, p.y).matrixTransform(matrix);
-        });
-
-        // 3. Bounding box axis-aligned (AABB) englobant le rectangle tourné
-        let minX = Infinity, minY = Infinity;
-        let maxX = -Infinity, maxY = -Infinity;
-
-        for (const pt of transformed) {
-            minX = Math.min(minX, pt.x);
-            minY = Math.min(minY, pt.y);
-            maxX = Math.max(maxX, pt.x);
-            maxY = Math.max(maxY, pt.y);
-        }
-
-        const rect: Rect = {
-            x: minX,
-            y: minY,
-            width: maxX - minX,
-            height: maxY - minY
+        return {
+            x: bounds.minX,
+            y: bounds.minY,
+            width: bounds.maxX - bounds.minX,
+            height: bounds.maxY - bounds.minY,
         };
-
-        return rect;
     }
 
     private buildPaths() {
@@ -254,18 +231,25 @@ export class Pet {
         this.inPath = inParts
         this.outPath = outParts
 
-        const box = { 
-            x: this.x,
-            y: this.y,
-            width: this.body.size.x,
-            height: this.body.size.y
-        }
-        boxes.forEach((b) => {
-            if
-        })
 
+        let minX = 0;
+        let minY = 0;
+        let maxX = this.body.size.x;
+        let maxY = this.body.size.y;
 
-        console.log(box)
+        boxes.forEach(b => {
+            minX = Math.min(minX, b.x);
+            minY = Math.min(minY, b.y);
+            maxX = Math.max(maxX, b.x + b.width);
+            maxY = Math.max(maxY, b.y + b.height);
+        });
+
+        this.boundingBox = {
+            x: minX,
+            y: minY,
+            width: maxX - minX,
+            height: maxY - minY
+        };
     }
 
     private frameCounter = 0;
@@ -279,7 +263,7 @@ export class Pet {
         let needRebuild = false;
 
         // animate body
-        if (anim.body && this.frameCounter % this.bodySpeed === 0) {
+        if (anim.body && this.frameCounter % anim.body === 0) {
             this.body = this.bodys[(this.body.frame + 1) % this.bodys.length]
             needRebuild = true
         }
@@ -343,30 +327,46 @@ export class Pet {
 
         this.animate()
 
+        const ctx = Context;
+        const t = transform;           // raccourci pour lisibilité
+        const [border, bodyFill, partsFill] = this.colors;  // ex: border=#000, body=#fff, parts=#f00
 
+        ctx.save();
+        ctx.setTransform(t);           // une seule fois, tout est relatif à ça ensuite
 
-        Context.save()
-        Context.save()
-        Context.setTransform(transform)
-        Context.fillStyle = "red"
-        Context.fillRect(0, 0, this.body.size.x, this.body.size.y);
-        Context.lineWidth = 1
-        Context.fillStyle = this.colors[2]
-        Context.fill(this.outPath)
-        Context.strokeStyle = this.colors[0]
-        Context.stroke(this.outPath)
-        Context.globalCompositeOperation = "destination-out"
-        Context.fill(this.bodyPath)
-        Context.restore()
-        Context.setTransform(transform)
-        Context.fillStyle = this.colors[1]
-        Context.fill(this.bodyPath)
-        Context.lineWidth = 1
-        Context.strokeStyle = this.colors[0]
-        Context.stroke(this.bodyPath)
-        Context.fillStyle = this.colors[2]
-        Context.fill(this.inPath)
-        Context.stroke(this.inPath)
-        Context.restore()
+        // 1. Dessin du rectangle de debug (optionnel – à commenter en prod si besoin)
+        ctx.fillStyle = "red";
+        ctx.fillRect(this.boundingBox.x, this.boundingBox.y, this.boundingBox.width, this.boundingBox.height);
+
+        // ────────────────────────────────────────────────
+        // Rendu principal (tous les éléments dans le même espace transformé)
+        // ────────────────────────────────────────────────
+        ctx.save();
+        ctx.setTransform(t);           // remis au propre au cas où le clip précédent a perturbé
+
+        ctx.lineWidth = 1;
+        ctx.strokeStyle = border;
+
+        // Parties externes (pattes, bras, etc.) – dessin + contour
+        ctx.fillStyle = partsFill;
+        ctx.fill(this.outPath);
+        ctx.stroke(this.outPath);
+
+        // Découpage du corps (trous pour les parties internes)
+        ctx.globalCompositeOperation = "destination-out";
+        ctx.fill(this.bodyPath);       // perce les trous dans les outParts
+        ctx.globalCompositeOperation = "source-over";  // on remet le mode normal
+
+        // Corps principal
+        ctx.fillStyle = bodyFill;
+        ctx.fill(this.bodyPath);
+        ctx.stroke(this.bodyPath);
+
+        // Parties internes (yeux, bouche, etc.)
+        ctx.fillStyle = partsFill;
+        ctx.fill(this.inPath);
+        ctx.stroke(this.inPath);
+
+        ctx.restore();
     }
 }
