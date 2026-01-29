@@ -1,36 +1,6 @@
-import Eggplant from './../../mixer/out/bodies/eggplant.json'
-import PeanutMouth from './../../mixer/out/bodyparts/mouth-peanutmouth.json'
-import { Context } from './Canvas'
-import { BodyFrame, PartFrame, Point, Rect } from './types'
-
-
-let BODIES: BodyFrame[][] = []
-export async function LoadBodies() {
-    const promises = Object.values(import.meta.glob('./../../mixer/out/bodies/*.json')).map((m: any) => m().then((m: any) => m.default))
-    BODIES = await Promise.all(promises)
-}
-
-let BODYPARTS: PartFrame[][] = []
-export async function LoadBodyparts() {
-    const promises = Object.values(import.meta.glob('./../../mixer/out/bodyparts/*.json')).map((m: any) => m().then((m: any) => m.default))
-    BODYPARTS = (await Promise.all(promises)).map((a: PartFrame[]) => a.sort((a, b) => a.frame - b.frame))
-}
-
-function getBody() {
-    return BODIES[Math.floor(Math.random() * BODIES.length)]
-}
-
-
-function getPart(type: string, dont: string[] = []): PartFrame[] {
-    const parts = BODYPARTS.filter((o) => o[0].type === type && dont.indexOf(o[0].name) === -1)
-    return parts[Math.floor(Math.random() * parts.length)]
-}
-
-function getOtherPart(part: PartFrame[]): PartFrame[] {
-    const parts = BODYPARTS.filter((o) => o[0].type !== part[0].type)
-    return parts.find((p) => p[0].name === part[0].name)!
-}
-
+import { getBody, getClosedEyeFrame, getOtherPart, getPart } from '../utils';
+import { Context } from './../Canvas'
+import { BodyFrame, PartFrame, Point, Rect, Renderer } from './../types'
 
 enum PetAnimationState {
     IDLE,
@@ -97,7 +67,7 @@ const BLINK_COOLDOWN = 300
 const BLINK_PROBABILITY = 100
 
 
-export class Pet {
+export class PetRenderer implements Renderer {
 
     private bodys: BodyFrame[]
     private body: BodyFrame;
@@ -119,17 +89,11 @@ export class Pet {
     public colors = ["#004990", "#f7c8dd", "#a1d6dd"]
 
 
-    public boundingBox!: Rect;
+    private boundingBox!: Rect;
     /**
      * negative = blinking cooldown / positive = blinking 
      */
     public blink = 0
-    /** 
-     * Level of zoom
-     */
-    public zoom = 2;
-    public x = 10;
-    public y = 10;
 
     /**
      * Currently playing animation
@@ -165,7 +129,7 @@ export class Pet {
 
         this.buildPaths()
 
-        Pet.CLOSED_EYE_FRAME = BODYPARTS.find((d) => d[0].name === "CLOSED")![0]
+        PetRenderer.CLOSED_EYE_FRAME = getClosedEyeFrame()
     }
 
     private pinPart(path: Path2D, points: Point[], part: PartFrame): Rect {
@@ -271,7 +235,7 @@ export class Pet {
         if (anim && anim.parts.length > 0 && this.frameCounter % anim.speed === 0) {
             for (let partName of anim.parts) {
                 const frames = this[`${partName}s`] as PartFrame[];
-                const current = this[partName as keyof Pet] as PartFrame;
+                const current = this[partName as keyof PetRenderer] as PartFrame;
 
                 let nextIdx = current.frame + 1;
                 if (nextIdx >= frames.length) {
@@ -283,8 +247,8 @@ export class Pet {
 
                 let nextFrame = frames[nextIdx]
 
-                if (this[partName as keyof Pet] !== nextFrame) {
-                    (this[partName as keyof Pet] as any) = nextFrame;
+                if (this[partName as keyof PetRenderer] !== nextFrame) {
+                    (this[partName as keyof PetRenderer] as any) = nextFrame;
                     needRebuild = true;
                 }
             }
@@ -305,8 +269,8 @@ export class Pet {
         }
         if (needRebuild) {
             if (this.blink > 0) {
-                this.eye1 = Pet.CLOSED_EYE_FRAME
-                this.eye2 = Pet.CLOSED_EYE_FRAME
+                this.eye1 = PetRenderer.CLOSED_EYE_FRAME
+                this.eye2 = PetRenderer.CLOSED_EYE_FRAME
             } else if (this.blink < 0) {
                 this.eye1 = this.eye1s[0]
                 this.eye2 = this.eye2s[0]
@@ -319,11 +283,11 @@ export class Pet {
         }
     }
 
-    render() {
+    render(x: number, y: number, z: number) {
         if (!Context || !this.bodyPath || !this.outPath || !this.inPath) return
         const transform = new DOMMatrix()
-        transform.scaleSelf(this.zoom, this.zoom)
-        transform.translateSelf(this.x, this.y)
+        transform.scaleSelf(z, z)
+        transform.translateSelf(x, y)
 
         this.animate()
 
@@ -368,5 +332,9 @@ export class Pet {
         ctx.stroke(this.inPath);
 
         ctx.restore();
+    }
+
+    BoundingBox(): Rect {
+        return this.boundingBox
     }
 }

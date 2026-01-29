@@ -1,3 +1,15 @@
+export interface Renderer { 
+    BoundingBox(): Rect
+    render(x: number, y: number, z: number): void
+}
+
+export interface Entity { 
+    X(): number 
+    Y(): number 
+    Z(): number
+    render(): void
+}
+
 export type Point = {
     x: number, 
     y: number,
