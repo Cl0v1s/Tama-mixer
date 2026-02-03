@@ -140,11 +140,11 @@ func SaveBodiesToJSON(prefix string, bodies []Body) error {
 }
 
 type BodyPart struct {
-	Path  string       `json:"path"`
-	Type  BodypartType `json:"type"`
-	Frame int          `json:"frame"`
-	Name  string       `json:"name"`
-	Size  Point        `json:"size"`
+	Path        string       `json:"path"`
+	Type        BodypartType `json:"type"`
+	Frame       int          `json:"frame"`
+	Name        string       `json:"name"`
+	BoundingBox Rect         `json:"boundingBox"`
 }
 
 type SVG struct {
@@ -310,6 +310,11 @@ func (cmd *Command) Transform(t Transformation) {
 	}
 }
 
+type Rect struct {
+	TopLeft     Point `json:"topLeft"`
+	BottomRight Point `json:"bottomRight"`
+}
+
 type Path struct {
 	ID    string `xml:"id,attr"`
 	Label string `xml:"label,attr"`
@@ -317,20 +322,27 @@ type Path struct {
 	Style string `xml:"style,attr"`
 }
 
-func (path *Path) GetSize() Point {
+func (path *Path) GetBoundingBox() Rect {
 	cmds := ParseD(path.D)
 	bzs := GetBeziersFromCommands(cmds)
-	size := Point{}
+	lowest := Point{}
+	highwest := Point{}
 	for _, bz := range bzs {
 		for i := 0.0; i <= 1.0; i += 0.05 {
 			point := GetPointFromBezier(bz, i)
-			if point.X > size.X {
-				size.X = point.X
+			if point.X > highwest.X {
+				highwest.X = point.X
 			}
-			if point.Y > size.Y {
-				size.Y = point.Y
+			if point.Y > highwest.Y {
+				highwest.Y = point.Y
+			}
+			if point.X < lowest.X {
+				lowest.X = point.X
+			}
+			if point.Y < lowest.Y {
+				lowest.Y = point.Y
 			}
 		}
 	}
-	return size
+	return Rect{TopLeft: lowest, BottomRight: highwest}
 }

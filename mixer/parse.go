@@ -610,7 +610,7 @@ func parseBodypart(g Group) BodyPart {
 		group = GroupNormalizeRotation(group)
 	}
 	path := group.GetPath()
-	size := path.GetSize()
+	bb := path.GetBoundingBox()
 
 	frameReg := regexp.MustCompile("(.+)-([0-9]+)")
 	matches := frameReg.FindStringSubmatch(group.ID)
@@ -622,11 +622,11 @@ func parseBodypart(g Group) BodyPart {
 		panic(err)
 	}
 	return BodyPart{
-		Size:  size,
-		Path:  path.D,
-		Type:  BodypartType(group.Label),
-		Frame: int(frame),
-		Name:  matches[1],
+		BoundingBox: bb,
+		Path:        path.D,
+		Type:        BodypartType(group.Label),
+		Frame:       int(frame),
+		Name:        matches[1],
 	}
 }
 
