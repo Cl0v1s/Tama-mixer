@@ -1,55 +1,7 @@
 import { getBody, getClosedEyeFrame, getOtherPart, getPart } from '../utils';
 import { Context } from './../Canvas'
 import { BodyFrame, PartFrame, Point, Rect, Renderer } from './../types'
-
-enum PetAnimationState {
-    IDLE,
-    EATING,
-    WALKING
-}
-
-type BodyPart = "mouth" | "leg1" | "leg2" | "arm1" | "arm2" | "eye1" | "eye2"
-
-type AnimationConfig = {
-    /**
-     * Moving parts in this animations
-     */
-    parts: Array<BodyPart>;
-    /**
-     * 1 = every tick, 4 = every 4 tick etc...
-     */
-    speed: number;
-    /**
-     * Does animation loops
-     */
-    loop: boolean;
-    /**
-     * Does animation allow animated body 0 -> no
-     */
-    body: number
-};
-
-const ANIMATIONS: Record<PetAnimationState, AnimationConfig> = {
-    [PetAnimationState.IDLE]: {
-        parts: [],
-        speed: 1,
-        loop: true,
-        body: 100,
-    },
-    [PetAnimationState.WALKING]: {
-        parts: ['leg1', 'leg2', 'arm1', 'arm2'],
-        speed: 20,
-        loop: true,
-        body: 50
-    },
-    [PetAnimationState.EATING]: {
-        parts: ['mouth'],
-        speed: 20,
-        loop: true,
-        body: 0
-    }
-};
-
+import { ANIMATIONS, PetState } from './Animations';
 
 /**
  * Number of tick blinking
@@ -88,17 +40,20 @@ export class PetRenderer implements Renderer {
 
     public colors = ["#004990", "#f7c8dd", "#a1d6dd"]
 
-
     private boundingBox!: Rect;
     /**
      * negative = blinking cooldown / positive = blinking 
      */
-    public blink = 0
+    private blink = 0
 
     /**
      * Currently playing animation
      */
-    public animationState: PetAnimationState = PetAnimationState.WALKING
+    public animationState: PetState = PetState.IDLE
+
+    public revert: boolean = false;
+
+
 
     private bodyPath!: Path2D
     private outPath!: Path2D
@@ -211,8 +166,8 @@ export class PetRenderer implements Renderer {
         this.boundingBox = {
             x: minX,
             y: minY,
-            width: maxX - minX,
-            height: maxY - minY
+            width: (maxX - minX),
+            height: (maxY - minY)
         };
     }
 
@@ -241,7 +196,7 @@ export class PetRenderer implements Renderer {
                 if (nextIdx >= frames.length) {
                     nextIdx = anim.loop ? 0 : frames.length - 1;
                     if (!anim.loop) {
-                        this.animationState = PetAnimationState.IDLE;
+                        this.animationState = PetState.IDLE;
                     }
                 }
 
@@ -285,9 +240,15 @@ export class PetRenderer implements Renderer {
 
     render(x: number, y: number, z: number) {
         if (!Context || !this.bodyPath || !this.outPath || !this.inPath) return
-        const transform = new DOMMatrix()
+        let transform = new DOMMatrix()
+        if(this.revert) {
+            transform.translateSelf(x + this.boundingBox.width * z, y)
+            transform = transform.flipX()
+        } else {
+            transform.translateSelf(x, y)
+        }
         transform.scaleSelf(z, z)
-        transform.translateSelf(x, y)
+
 
         this.animate()
 
@@ -295,16 +256,6 @@ export class PetRenderer implements Renderer {
         const t = transform;           // raccourci pour lisibilité
         const [border, bodyFill, partsFill] = this.colors;  // ex: border=#000, body=#fff, parts=#f00
 
-        ctx.save();
-        ctx.setTransform(t);           // une seule fois, tout est relatif à ça ensuite
-
-        // 1. Dessin du rectangle de debug (optionnel – à commenter en prod si besoin)
-        ctx.fillStyle = "red";
-        ctx.fillRect(this.boundingBox.x, this.boundingBox.y, this.boundingBox.width, this.boundingBox.height);
-
-        // ────────────────────────────────────────────────
-        // Rendu principal (tous les éléments dans le même espace transformé)
-        // ────────────────────────────────────────────────
         ctx.save();
         ctx.setTransform(t);           // remis au propre au cas où le clip précédent a perturbé
 

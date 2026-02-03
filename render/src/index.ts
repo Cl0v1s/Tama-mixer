@@ -3,9 +3,7 @@ import { PetEntity } from "./Pet/Entity";
 import { Entity } from "./types";
 import { LoadBodies, LoadBodyparts } from "./utils";
 
-
 const entities: Entity[] = []
-
 
 function render() {
     if(!Canvas || !Context) return
@@ -21,8 +19,11 @@ window.onload = async () => {
     await LoadBodies()
     await LoadBodyparts()
     if(!Canvas || !Context) return
+    const pet = new PetEntity()
+    pet.Move(0, 0, 2)
+    pet.Move(Canvas.clientWidth / 2 - pet.W() / 2, Canvas.clientHeight / 2 - pet.H() / 2)
     entities.push(
-        new PetEntity(Canvas.clientWidth/2, Canvas.clientHeight/2)
+        pet
     ) 
     requestAnimationFrame(render)
 }
