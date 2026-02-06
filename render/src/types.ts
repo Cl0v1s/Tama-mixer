@@ -58,3 +58,16 @@ export type PartFrame = {
         bottomRight: Point
     }
 }
+
+export interface IStateMachine {
+    Enter(nextState: State): boolean
+}
+
+export type StateLeaveCondition = "manual" | "timeout" | "delay"
+
+export type State = {
+    condition: StateLeaveCondition,
+    time?: number,
+    callback?: (caller: IStateMachine) => void,
+    next: State[]
+}
