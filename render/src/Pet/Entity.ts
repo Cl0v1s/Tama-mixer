@@ -1,5 +1,5 @@
-import { Entity } from "../types";
-import { PetState } from "./Animations";
+import { Entity, Renderer } from "../types";
+import { ANIMATIONS, PetState } from "./Animations";
 import { PetPhysics } from "./Physics";
 import { PetRenderer } from "./Renderer";
 
@@ -18,6 +18,12 @@ export class PetEntity implements Entity {
         this.y = 0;
         this.z = 1; 
         this.physics = new PetPhysics(this)
+        this.renderer = new PetRenderer();
+        this.renderer.Subscribe(this);
+    }
+
+    Destroy(): void {
+        this.renderer.UnSubscribe(this)
     }
 
     Move(x: number, y: number, z?: number): Entity {
@@ -49,7 +55,7 @@ export class PetEntity implements Entity {
     tick(): void {
         if(this.state === PetState.IDLE) {
             if(Math.floor(Math.random() * 10) === 0) {
-                // this.physics.applyForce({ x: 2, y: 0, t: 0})
+                this.physics.applyForce({ x: 2, y: 0, t: 0})
             }
         }
         if(Math.abs(this.physics.Vector().x) + Math.abs(this.physics.Vector().y) > 0) {
@@ -63,12 +69,16 @@ export class PetEntity implements Entity {
             this.renderer.revert = false
         }
 
-        this.renderer.animationState = this.state
+        this.renderer.animation = ANIMATIONS[this.state]
     }
 
-    render(): void {
-        this.physics.tick(1)
+    OnRenderer(renderer: Renderer): void {
+        throw new Error("Method not implemented.");
+    }
+
+    Render(): void {
+        this.physics.Tick(1)
         this.tick()
-        this.renderer.render(this.x ,this.y, this.z)
+        this.renderer.Render(this.x ,this.y, this.z)
     }
 }

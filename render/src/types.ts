@@ -1,22 +1,29 @@
+export interface RendererListener {
+    OnRenderer(renderer: Renderer): void;
+}
+
 export interface Renderer { 
+    Subscribe(listener: RendererListener): void
+    UnSubscribe(listener: RendererListener): void
     BoundingBox(): Rect
-    render(x: number, y: number, z: number): void
+    Render(x: number, y: number, z: number): void
 }
 
 export interface Physics {
     Vector(): Point
     Entity(): Entity
-    tick(alpha: number): void
+    Tick(alpha: number): void
 }
 
-export interface Entity { 
+export interface Entity extends RendererListener { 
     X(): number 
     Y(): number 
     W(): number
     H(): number;
     Z(): number
-    render(): void
+    Render(): void
     Move(x: number, y: number, z?: number): Entity 
+    Destroy(): void 
 }
 
 export type Point = {

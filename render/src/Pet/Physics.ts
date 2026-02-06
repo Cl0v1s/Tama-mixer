@@ -54,7 +54,7 @@ export class PetPhysics implements Physics {
         }
     }
 
-    tick(alpha: number): void {
+    Tick(alpha: number): void {
         this.applyLimits()
         this.applyGravity()
         if(Math.abs(this.vector.x) <= 1) this.vector.x = 0

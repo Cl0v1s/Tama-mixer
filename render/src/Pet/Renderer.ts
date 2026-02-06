@@ -1,7 +1,7 @@
 import { getBody, getClosedEyeFrame, getOtherPart, getPart } from '../utils';
 import { Context } from './../Canvas'
-import { BodyFrame, PartFrame, Point, Rect, Renderer } from './../types'
-import { ANIMATIONS, PetState } from './Animations';
+import { BodyFrame, PartFrame, Point, Rect, Renderer, RendererListener } from './../types'
+import { AnimationConfig, ANIMATIONS, PetState } from './Animations';
 
 /**
  * Number of tick blinking
@@ -49,10 +49,11 @@ export class PetRenderer implements Renderer {
     /**
      * Currently playing animation
      */
-    public animationState: PetState = PetState.IDLE
+    public animation?: AnimationConfig;
 
     public revert: boolean = false;
 
+    private listeners: RendererListener[] = [];
 
 
     private bodyPath!: Path2D
@@ -88,43 +89,48 @@ export class PetRenderer implements Renderer {
     }
 
     private pinPart(path: Path2D, points: Point[], part: PartFrame): Rect {
-        const index = points.findIndex((po) => po.type === part.type);
-        if (index < 0) {
-            return { x: 0, y: 0, width: 0, height: 0 };
+        try {
+            const index = points.findIndex((po) => po.type === part.type);
+            if (index < 0) {
+                return { x: 0, y: 0, width: 0, height: 0 };
+            }
+
+            const anchor = points[index];
+            points.splice(index, 1);
+
+            // Matrice de transformation : translation + rotation autour de l'ancre
+            const matrix = new DOMMatrix();
+            matrix.translateSelf(anchor.x, anchor.y);
+            matrix.rotateSelf(anchor.t);           // rotation en degrés
+
+            // Ajout du sous-chemin avec la transformation
+            const subpath = new Path2D(part.path);
+            path.addPath(subpath, matrix);
+
+            const radians = anchor.t * (Math.PI / 180)
+            const bounds = [part.boundingBox.topLeft, { x: part.boundingBox.bottomRight.x, y: part.boundingBox.topLeft.y }, part.boundingBox.bottomRight, { x: part.boundingBox.topLeft.x, y: part.boundingBox.bottomRight.y }]
+                .map((point) => ({ ...point, x: point.x * Math.cos(radians) - point.y * Math.sin(radians), y: point.x * Math.sin(radians) + point.y * Math.cos(radians) } as Point))
+                .map((point) => ({ ...point, x: point.x + anchor.x, y: point.y + anchor.y } as Point)) // translate 
+                .reduce(
+                    (acc, p) => ({
+                        minX: Math.min(acc.minX, p.x),
+                        minY: Math.min(acc.minY, p.y),
+                        maxX: Math.max(acc.maxX, p.x),
+                        maxY: Math.max(acc.maxY, p.y),
+                    }),
+                    { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
+                );
+
+            return {
+                x: bounds.minX,
+                y: bounds.minY,
+                width: bounds.maxX - bounds.minX,
+                height: bounds.maxY - bounds.minY,
+            };
+        } catch (e) {
+            console.error('Error building body with ' + part.name + part.frame)
+            throw e
         }
-
-        const anchor = points[index];
-        points.splice(index, 1);
-
-        // Matrice de transformation : translation + rotation autour de l'ancre
-        const matrix = new DOMMatrix();
-        matrix.translateSelf(anchor.x, anchor.y);
-        matrix.rotateSelf(anchor.t);           // rotation en degrés
-
-        // Ajout du sous-chemin avec la transformation
-        const subpath = new Path2D(part.path);
-        path.addPath(subpath, matrix);
-
-        const radians = anchor.t * (Math.PI / 180)
-        const bounds = [part.boundingBox.topLeft, { x: part.boundingBox.bottomRight.x, y: part.boundingBox.topLeft.y }, part.boundingBox.bottomRight, { x: part.boundingBox.topLeft.x, y: part.boundingBox.bottomRight.y }]
-            .map((point) => ({ ...point, x: point.x * Math.cos(radians) - point.y * Math.sin(radians), y: point.x * Math.sin(radians) + point.y * Math.cos(radians) } as Point))
-            .map((point) => ({ ...point, x: point.x + anchor.x, y: point.y + anchor.y } as Point)) // translate 
-            .reduce(
-                (acc, p) => ({
-                    minX: Math.min(acc.minX, p.x),
-                    minY: Math.min(acc.minY, p.y),
-                    maxX: Math.max(acc.maxX, p.x),
-                    maxY: Math.max(acc.maxY, p.y),
-                }),
-                { minX: Infinity, minY: Infinity, maxX: -Infinity, maxY: -Infinity }
-            );
-
-        return {
-            x: bounds.minX,
-            y: bounds.minY,
-            width: bounds.maxX - bounds.minX,
-            height: bounds.maxY - bounds.minY,
-        };
     }
 
     private buildPaths() {
@@ -171,12 +177,25 @@ export class PetRenderer implements Renderer {
         };
     }
 
-    private frameCounter = 0;
+    public UnSubscribe(listener: RendererListener): void {
+        this.listeners = this.listeners.filter((b) => b !== listener)
+    }
 
+    public Subscribe(listener: RendererListener): void {
+        this.listeners.push(listener);
+    }
+
+    private onAnimationEnd() {
+        this.listeners.forEach((l) => l.OnRenderer(this))
+        this.animation = undefined;
+    }
+
+
+    private frameCounter = 0;
     private animate() {
         this.frameCounter = (this.frameCounter + 1);
 
-        const anim = ANIMATIONS[this.animationState];
+        const anim = this.animation
         if (!anim) return
 
         let needRebuild = false;
@@ -196,7 +215,7 @@ export class PetRenderer implements Renderer {
                 if (nextIdx >= frames.length) {
                     nextIdx = anim.loop ? 0 : frames.length - 1;
                     if (!anim.loop) {
-                        this.animationState = PetState.IDLE;
+                        this.onAnimationEnd()
                     }
                 }
 
@@ -238,10 +257,10 @@ export class PetRenderer implements Renderer {
         }
     }
 
-    render(x: number, y: number, z: number) {
+    Render(x: number, y: number, z: number) {
         if (!Context || !this.bodyPath || !this.outPath || !this.inPath) return
         let transform = new DOMMatrix()
-        if(this.revert) {
+        if (this.revert) {
             transform.translateSelf(x + this.boundingBox.width * z, y)
             transform = transform.flipX()
         } else {

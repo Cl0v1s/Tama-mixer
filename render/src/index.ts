@@ -10,7 +10,7 @@ function render() {
     Context.fillStyle = "white"
     Context.fillRect(0, 0, Canvas.clientWidth, Canvas.clientHeight)
 
-    entities.forEach((e) => e.render())
+    entities.forEach((e) => e.Render())
 
     requestAnimationFrame(render)
 }
