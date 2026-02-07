@@ -7,10 +7,16 @@ export class StateMachine implements IStateMachine {
 
     constructor(initState: State) {
         this.currentState = initState
+        if(this.currentState.OnEnter) this.currentState.OnEnter(this)
+    }
+
+    State() {
+        return this.currentState
     }
 
     private OnEnterManual(nextState: State): boolean {
         this.currentState = nextState
+        if(this.currentState.OnEnter) this.currentState.OnEnter(this)
         return true;
     }
 
@@ -23,11 +29,12 @@ export class StateMachine implements IStateMachine {
         clearTimeout(this.timer)
         this.timer = setTimeout(() => { this.canChange = true }, nextState.time)
         this.currentState = nextState
+        if(this.currentState.OnEnter) this.currentState.OnEnter(this)
         return true;
     }
 
     private onEnterTimeout(nextState: State): boolean {
-        if(!nextState.callback) {
+        if(!nextState.OnExit) {
             console.warn("Timeout state must have a callback")
             return false
         }
@@ -36,14 +43,17 @@ export class StateMachine implements IStateMachine {
             return false
         }
         clearTimeout(this.timer)
-        this.timer = setTimeout(this.onExit.bind(this), nextState.time)
+        this.timer = setTimeout(() => {
+            if(this.currentState.OnExit) this.currentState.OnExit(this)
+        }, nextState.time)
         this.currentState = nextState
+        if(this.currentState.OnEnter) this.currentState.OnEnter(this)
         return true;
     }
 
 
     Enter(nextState: State): boolean {
-        if (this.currentState.next.indexOf(nextState) === -1 || !this.canChange) {
+        if (this.currentState.next.indexOf(nextState.key) === -1 || !this.canChange) {
             return false;
         }
         switch (nextState.condition) {
@@ -53,9 +63,5 @@ export class StateMachine implements IStateMachine {
             default:
                 return this.OnEnterManual(nextState)
         }
-    }
-
-    private onExit() {
-        if(this.currentState.callback) this.currentState.callback(this)
     }
 }

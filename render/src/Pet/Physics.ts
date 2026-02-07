@@ -23,7 +23,11 @@ export class PetPhysics implements Physics {
         return this.entity
     }
 
-    public applyForce(v: Point) {
+    public Stop() {
+        this.vector = { x: 0, y: 0, t: 0}
+    }
+
+    public ApplyForce(v: Point) {
         this.vector.x += v.x;
         this.vector.y += v.y
     }

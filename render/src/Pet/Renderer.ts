@@ -1,7 +1,7 @@
 import { getBody, getClosedEyeFrame, getOtherPart, getPart } from '../utils';
 import { Context } from './../Canvas'
 import { BodyFrame, PartFrame, Point, Rect, Renderer, RendererListener } from './../types'
-import { AnimationConfig, ANIMATIONS, PetState } from './Animations';
+import { AnimationConfig } from './Animations';
 
 /**
  * Number of tick blinking
@@ -49,7 +49,7 @@ export class PetRenderer implements Renderer {
     /**
      * Currently playing animation
      */
-    public animation?: AnimationConfig;
+    private animation?: AnimationConfig;
 
     public revert: boolean = false;
 
@@ -255,6 +255,10 @@ export class PetRenderer implements Renderer {
         if (needRebuild) {
             this.buildPaths();
         }
+    }
+
+    Play(animation: AnimationConfig) {
+        this.animation = animation
     }
 
     Render(x: number, y: number, z: number) {

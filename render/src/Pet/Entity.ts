@@ -1,7 +1,8 @@
-import { Entity, Renderer } from "../types";
-import { ANIMATIONS, PetState } from "./Animations";
+import { StateMachine } from "../StateMachine";
+import { Entity, Renderer, State } from "../types";
 import { PetPhysics } from "./Physics";
 import { PetRenderer } from "./Renderer";
+import { AVAILABLE_PET_STATES, PET_STATES } from "./States";
 
 
 export class PetEntity implements Entity {
@@ -9,9 +10,10 @@ export class PetEntity implements Entity {
     private y: number;
     private z: number;
 
-    private state: PetState = PetState.IDLE
-    private renderer = new PetRenderer();
-    private physics;
+    private stateMachine: StateMachine
+
+    public renderer: PetRenderer;
+    public physics: PetPhysics;
 
     constructor() {
         this.x = 0;
@@ -20,6 +22,10 @@ export class PetEntity implements Entity {
         this.physics = new PetPhysics(this)
         this.renderer = new PetRenderer();
         this.renderer.Subscribe(this);
+
+        const s = Object.assign({}, PET_STATES.Idle)
+        s.currentPet = this
+        this.stateMachine = new StateMachine(s)
     }
 
     Destroy(): void {
@@ -53,23 +59,12 @@ export class PetEntity implements Entity {
     }
 
     tick(): void {
-        if(this.state === PetState.IDLE) {
-            if(Math.floor(Math.random() * 10) === 0) {
-                this.physics.applyForce({ x: 2, y: 0, t: 0})
-            }
-        }
-        if(Math.abs(this.physics.Vector().x) + Math.abs(this.physics.Vector().y) > 0) {
-            this.state = PetState.WALKING
-        } else {
-            this.state = PetState.IDLE
-        }
+        if(this.stateMachine.currentState.Update) this.stateMachine.currentState.Update();
         if(this.physics.Vector().x > 0) {
             this.renderer.revert = true
         } else {
             this.renderer.revert = false
         }
-
-        this.renderer.animation = ANIMATIONS[this.state]
     }
 
     OnRenderer(renderer: Renderer): void {
@@ -80,5 +75,11 @@ export class PetEntity implements Entity {
         this.physics.Tick(1)
         this.tick()
         this.renderer.Render(this.x ,this.y, this.z)
+    }
+
+    SetState(state: typeof PET_STATES[typeof AVAILABLE_PET_STATES[number]]): void {
+        const s = Object.assign({}, state)
+        s.currentPet = this
+        this.stateMachine.Enter(s);
     }
 }

@@ -1,8 +1,4 @@
-export enum PetState {
-    IDLE,
-    EATING,
-    WALKING
-}
+import { AVAILABLE_PET_STATES } from "./States";
 
 export type BodyPart = "mouth" | "leg1" | "leg2" | "arm1" | "arm2" | "eye1" | "eye2"
 
@@ -28,20 +24,20 @@ export type AnimationConfig = {
 
 
 
-export const ANIMATIONS: Record<PetState, AnimationConfig> = {
-    [PetState.IDLE]: {
+export const PET_ANIMATIONS: Record<typeof AVAILABLE_PET_STATES[number], AnimationConfig> = {
+    Idle: {
         parts: [],
         speed: 1,
         loop: true,
         body: 100,
     },
-    [PetState.WALKING]: {
+    Walking: {
         parts: ['leg1', 'leg2', 'arm1', 'arm2'],
         speed: 10,
         loop: true,
         body: 20
     },
-    [PetState.EATING]: {
+    Eating: {
         parts: ['mouth'],
         speed: 20,
         loop: true,
