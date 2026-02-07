@@ -9,13 +9,12 @@ type IPetState = State & {
 }
 
 export const PET_STATES: Record<typeof AVAILABLE_PET_STATES[number], IPetState> = {
-    // @ts-expect-error tbd
-    Eating: {},
     Idle: {
         key: "Idle",
         condition: "manual",
         next: [
-            "Walking"
+            "Walking",
+            "Eating"
         ],
         OnEnter: function () {
             this.currentPet?.renderer.Play(PET_ANIMATIONS.Idle)
@@ -41,6 +40,21 @@ export const PET_STATES: Record<typeof AVAILABLE_PET_STATES[number], IPetState> 
         },
         OnExit: function () {
             this.currentPet?.physics.Stop();
+            this.currentPet?.SetState(PET_STATES.Idle)
+        }
+    },
+    Eating: {
+        key: "Eating",
+        currentPet: undefined,
+        condition: "timeout",
+        time: 2000,
+        next: [
+            "Idle"
+        ],
+        OnEnter: function () {
+            this.currentPet?.renderer.Play(PET_ANIMATIONS.Eating)
+        },
+        OnExit: function () {
             this.currentPet?.SetState(PET_STATES.Idle)
         }
     }

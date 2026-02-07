@@ -1,4 +1,4 @@
-import { getBody, getClosedEyeFrame, getOtherPart, getPart } from '../utils';
+import { getBody, getClosedEyeFrame, getOtherPart, getPart, getYOffset } from '../utils';
 import { Context } from './../Canvas'
 import { BodyFrame, PartFrame, Point, Rect, Renderer, RendererListener } from './../types'
 import { AnimationConfig } from './Animations';
@@ -263,6 +263,9 @@ export class PetRenderer implements Renderer {
 
     Render(x: number, y: number, z: number) {
         if (!Context || !this.bodyPath || !this.outPath || !this.inPath) return
+
+        y += getYOffset(x + (this.boundingBox.width * z) / 2 )
+
         let transform = new DOMMatrix()
         if (this.revert) {
             transform.translateSelf(x + this.boundingBox.width * z, y)
@@ -276,31 +279,27 @@ export class PetRenderer implements Renderer {
         this.animate()
 
         const ctx = Context;
-        const t = transform;           // raccourci pour lisibilité
+        const t = transform;        
         const [border, bodyFill, partsFill] = this.colors;  // ex: border=#000, body=#fff, parts=#f00
 
         ctx.save();
-        ctx.setTransform(t);           // remis au propre au cas où le clip précédent a perturbé
+        ctx.setTransform(t);          
 
         ctx.lineWidth = 1;
         ctx.strokeStyle = border;
 
-        // Parties externes (pattes, bras, etc.) – dessin + contour
         ctx.fillStyle = partsFill;
         ctx.fill(this.outPath);
         ctx.stroke(this.outPath);
 
-        // Découpage du corps (trous pour les parties internes)
         ctx.globalCompositeOperation = "destination-out";
-        ctx.fill(this.bodyPath);       // perce les trous dans les outParts
-        ctx.globalCompositeOperation = "source-over";  // on remet le mode normal
+        ctx.fill(this.bodyPath);     
+        ctx.globalCompositeOperation = "source-over"; 
 
-        // Corps principal
         ctx.fillStyle = bodyFill;
         ctx.fill(this.bodyPath);
         ctx.stroke(this.bodyPath);
 
-        // Parties internes (yeux, bouche, etc.)
         ctx.fillStyle = partsFill;
         ctx.fill(this.inPath);
         ctx.stroke(this.inPath);

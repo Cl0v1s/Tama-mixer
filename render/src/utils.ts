@@ -32,3 +32,7 @@ export function getOtherPart(part: PartFrame[]): PartFrame[] {
 export function getClosedEyeFrame() {
     return BODYPARTS.find((d) => d[0].name === "CLOSED")![0]
 }
+
+export function getYOffset(x: number) {
+    return -0.4 * x + 0.002 * x * x;
+}
