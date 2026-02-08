@@ -1,5 +1,29 @@
 import { BodyFrame, PartFrame } from "./types"
 
+export const COLOR_PALETTE = {
+    pet: {
+        stroke: "#004c84",
+        fill1: "#fff79c",
+        fill2: "#4192cd",
+    },
+    sky: [
+        { pos: 0.00, color: "#c2f5ff" },
+        { pos: 0.49, color: "#c2f5ff" },
+        { pos: 0.50, color: "#80ECFF" },
+        { pos: 0.69, color: "#80ECFF" },
+        { pos: 0.70, color: "#00b2d6" },
+        { pos: 0.84, color: "#00b2d6" },
+        { pos: 0.85, color: "#0077b8" },
+        { pos: 0.94, color: "#0077b8" },
+        { pos: 0.95, color: "#000261" },
+        { pos: 1.00, color: "#000261" }
+    ],
+    ground: {
+        stroke: "#0A2A57",
+        fill: "#C8F9ED"
+    }
+}
+
 let BODIES: BodyFrame[][] = []
 export async function LoadBodies() {
     // @ts-expect-error no typedef

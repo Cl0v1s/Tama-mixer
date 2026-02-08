@@ -1,4 +1,4 @@
-import { getBody, getClosedEyeFrame, getOtherPart, getPart, getYOffset } from '../utils';
+import { COLOR_PALETTE, getBody, getClosedEyeFrame, getOtherPart, getPart, getYOffset } from '../utils';
 import { Context } from './../Canvas'
 import { BodyFrame, PartFrame, Point, Rect, Renderer, RendererListener } from './../types'
 import { AnimationConfig } from './Animations';
@@ -38,7 +38,7 @@ export class PetRenderer implements Renderer {
     public eye1: PartFrame;
     public eye2: PartFrame;
 
-    public colors = ["#004990", "#f7c8dd", "#a1d6dd"]
+    public colors = [COLOR_PALETTE.pet.stroke, COLOR_PALETTE.pet.fill1, COLOR_PALETTE.pet.fill2]
 
     private boundingBox!: Rect;
     /**

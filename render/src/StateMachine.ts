@@ -42,12 +42,12 @@ export class StateMachine implements IStateMachine {
             console.warn("Timeout state must have a time")
             return false
         }
+        this.currentState = nextState
+        if(this.currentState.OnEnter) this.currentState.OnEnter(this)
         clearTimeout(this.timer)
         this.timer = setTimeout(() => {
             if(this.currentState.OnExit) this.currentState.OnExit(this)
         }, nextState.time)
-        this.currentState = nextState
-        if(this.currentState.OnEnter) this.currentState.OnEnter(this)
         return true;
     }
 

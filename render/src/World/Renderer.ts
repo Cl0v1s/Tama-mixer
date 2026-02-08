@@ -1,5 +1,6 @@
-import { Context } from "../Canvas";
+import { Canvas, Context } from "../Canvas";
 import { Rect, Renderer, RendererListener } from "../types";
+import { COLOR_PALETTE } from "../utils";
 
 export class WorldRenderer implements Renderer {
     Subscribe(listener: RendererListener): void {
@@ -12,20 +13,22 @@ export class WorldRenderer implements Renderer {
         throw new Error("Method not implemented.");
     }
     Render(x: number, y: number, z: number): void {
-        if(!Context) return;
+        if(!Context || !Canvas) return;
         Context.save()
-        // var gradient = Context.createLinearGradient(0, 200, 0, 0);
-        // gradient.addColorStop(0, "#7b2ca98e");
-        // gradient.addColorStop(1, "#532d9f90");
-        // Context.fillStyle = gradient;
-        // Context.fillRect(0, 0, 200, 200);
-
-        Context.lineWidth = 1
-        Context.strokeStyle = "#0c3761"
+        var gradient = Context.createLinearGradient(0, 200, 0, 0);
+        COLOR_PALETTE.sky.forEach((p) => {
+            gradient.addColorStop(p.pos, p.color);
+        })
+        Context.fillStyle = gradient;
+        Context.fillRect(0, 0, 200, 200);
+        Context.lineWidth = 2
+        Context.strokeStyle = COLOR_PALETTE.ground.stroke
+        Context.fillStyle = COLOR_PALETTE.ground.fill
         Context.beginPath();
         Context.moveTo(x, y);
         Context.quadraticCurveTo(x+100, y - 40, x+200, y);
-        Context.stroke();
+        Context.fill();
+        Context.fillRect(0, y, Canvas.clientWidth, Canvas.clientHeight - y)
         Context.restore()
     }
 }
