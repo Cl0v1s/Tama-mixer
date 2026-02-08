@@ -3,7 +3,7 @@ import { PetEntity } from "./Entity";
 
 
 const PET_GROUND = 190
-const G = 2
+const G = 1.5
 
 export class PetPhysics implements Physics {
 

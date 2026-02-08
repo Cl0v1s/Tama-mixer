@@ -2,7 +2,7 @@ import { State } from "../types";
 import { PET_ANIMATIONS } from "./Animations";
 import { PetEntity } from "./Entity";
 
-export const AVAILABLE_PET_STATES = ["Idle", "Walking", "Eating"] as const
+export const AVAILABLE_PET_STATES = ["Idle", "Walking", "Eating", "Jumping"] as const
 
 type IPetState = State & {
     currentPet?: PetEntity,
@@ -14,15 +14,38 @@ export const PET_STATES: Record<typeof AVAILABLE_PET_STATES[number], IPetState> 
         condition: "manual",
         next: [
             "Walking",
-            "Eating"
+            "Eating",
+            "Jumping"
         ],
         OnEnter: function () {
             this.currentPet?.renderer.Play(PET_ANIMATIONS.Idle)
         },
         Update: function () {
             if (Math.floor(Math.random() * 500) === 0) {
+                this.currentPet?.SetState(PET_STATES.Jumping)
+            } else if (Math.floor(Math.random() * 500) === 0) {
                 this.currentPet?.SetState(PET_STATES.Walking)
             }
+        }
+    },
+    Jumping: {
+        key: "Jumping",
+        currentPet: undefined,
+        condition: "manual",
+        next: [
+            "Idle"
+        ],
+        OnEnter: function () {
+            this.currentPet?.physics.ApplyForce({ x: 0, y: -10, t: 0 })
+        },
+        Update: function() {
+            if(!this.currentPet) return
+            if(Math.abs(this.currentPet.physics.Vector().y) < 1) {
+                this.currentPet?.SetState(PET_STATES.Idle)
+            }
+        },
+        OnExit: function() {
+            this.currentPet?.physics.Stop();
         }
     },
     Walking: {
