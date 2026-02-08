@@ -6,6 +6,7 @@ export const AVAILABLE_PET_STATES = ["Idle", "Walking", "Eating", "Jumping"] as 
 
 type IPetState = State & {
     currentPet?: PetEntity,
+    [x: string]: unknown
 }
 
 export const PET_STATES: Record<typeof AVAILABLE_PET_STATES[number], IPetState> = {
@@ -32,20 +33,30 @@ export const PET_STATES: Record<typeof AVAILABLE_PET_STATES[number], IPetState> 
         key: "Jumping",
         currentPet: undefined,
         condition: "manual",
+        timeout: undefined,
+        jumped: false,
         next: [
             "Idle"
         ],
         OnEnter: function () {
-            this.currentPet?.physics.ApplyForce({ x: 0, y: -10, t: 0 })
+            this.currentPet?.renderer.ApplyPose({ body: 1, leg1: 1, leg2: 1 })
+            clearTimeout(this.timeout as number)
+            this.timeout = setTimeout(() => {
+                this.currentPet?.renderer.ApplyPose({ body: 0, leg1: 0, leg2: 0 })
+                this.currentPet?.physics.ApplyForce({ x: 0, y: -10, t: 0 })
+                this.jumped = true
+            }, 1000)
         },
         Update: function() {
             if(!this.currentPet) return
-            if(Math.abs(this.currentPet.physics.Vector().y) < 1) {
+            if(this.jumped && Math.abs(this.currentPet.physics.Vector().y) < 1) {
                 this.currentPet?.SetState(PET_STATES.Idle)
             }
         },
         OnExit: function() {
             this.currentPet?.physics.Stop();
+            clearTimeout(this.timeout as number)
+            this.timeout = undefined
         }
     },
     Walking: {

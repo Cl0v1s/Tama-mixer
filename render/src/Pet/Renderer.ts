@@ -1,7 +1,19 @@
 import { COLOR_PALETTE, getBody, getClosedEyeFrame, getOtherPart, getPart, getYOffset } from '../utils';
 import { Context } from './../Canvas'
 import { BodyFrame, PartFrame, Point, Rect, Renderer, RendererListener } from './../types'
-import { AnimationConfig } from './Animations';
+import { AnimationConfig, PET_ANIMATIONS } from './Animations';
+
+
+type Pose = {
+    body?: number,
+    eye1?: number,
+    eye2?: number,
+    mouth?: number,
+    arm1?: number,
+    arm2?: number,
+    leg1?: number,
+    leg2?: number,
+}
 
 /**
  * Number of tick blinking
@@ -255,6 +267,27 @@ export class PetRenderer implements Renderer {
         if (needRebuild) {
             this.buildPaths();
         }
+    }
+
+    ApplyPose(pose: Pose) {
+        this.Play(PET_ANIMATIONS.Stop)
+        this.body = this.bodys[0]
+        this.eye1 = this.eye1s[0]
+        this.eye2 = this.eye2s[0]
+        this.mouth = this.mouths[0]
+        this.arm1 = this.arm1s[0]
+        this.arm2 = this.arm2s[0]
+        this.leg1 = this.leg1s[0]
+        this.leg2 = this.leg2s[0]
+
+        Object.keys(pose).forEach((key) => {
+            const value = pose[key as keyof Pose]          
+            if(value !== undefined) {
+                // @ts-expect-error no
+                this[key] = (this[`${key}s` as keyof PetRenderer] as unknown as PartFrame[])[value] 
+            }  
+        })
+        this.buildPaths()
     }
 
     Play(animation: AnimationConfig) {

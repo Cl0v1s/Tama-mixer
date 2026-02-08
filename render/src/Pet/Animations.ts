@@ -24,7 +24,13 @@ export type AnimationConfig = {
 
 
 
-export const PET_ANIMATIONS: Record<typeof AVAILABLE_PET_STATES[number], AnimationConfig> = {
+export const PET_ANIMATIONS: Record<(typeof AVAILABLE_PET_STATES[number] | "Stop"), AnimationConfig> = {
+    Stop: {
+        parts: [],
+        speed: 0,
+        loop: true,
+        body: 0
+    },
     Idle: {
         parts: [],
         speed: 1,
