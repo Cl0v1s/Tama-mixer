@@ -8,15 +8,11 @@ export const COLOR_PALETTE = {
     },
     sky: [
         { pos: 0.00, color: "#c2f5ff" },
-        { pos: 0.49, color: "#c2f5ff" },
-        { pos: 0.50, color: "#80ECFF" },
-        { pos: 0.69, color: "#80ECFF" },
-        { pos: 0.70, color: "#00b2d6" },
-        { pos: 0.84, color: "#00b2d6" },
-        { pos: 0.85, color: "#0077b8" },
-        { pos: 0.94, color: "#0077b8" },
-        { pos: 0.95, color: "#000261" },
-        { pos: 1.00, color: "#000261" }
+        { pos: 0.59, color: "#c2f5ff" },
+        { pos: 0.60, color: "#80ECFF" },
+        { pos: 0.79, color: "#80ECFF" },
+        { pos: 0.80, color: "#00b2d6" },
+        { pos: 0.94, color: "#00b2d6" },
     ],
     ground: {
         stroke: "#0A2A57",
